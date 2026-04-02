@@ -58,7 +58,6 @@ const ScheduleCard = React.memo(({ item, category, index = 0 }: ScheduleCardProp
           <div className="flex flex-wrap items-start justify-between gap-4 mb-3">
             <div className="flex-1 min-w-[200px]">
               <div className="flex items-center gap-2 mb-1">
-                {category?.icon && <span className="text-sm">{category.icon}</span>}
                 <h4 className="text-xl md:text-2xl text-text tracking-wide uppercase">
                   {item.title}
                 </h4>
@@ -79,7 +78,7 @@ const ScheduleCard = React.memo(({ item, category, index = 0 }: ScheduleCardProp
               "badge",
               isLive ? "badge-live" : isCompleted ? "badge-completed" : "badge-upcoming"
             )}>
-              {isLive ? "🔴 Live Now" : isCompleted ? "Completed" : "Upcoming"}
+              {isLive ? "Live Now" : isCompleted ? "Completed" : "Upcoming"}
             </div>
           </div>
 

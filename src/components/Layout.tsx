@@ -30,7 +30,6 @@ export default function Layout({ children, activeTab, setActiveTab, title, subti
     <div className="min-h-screen flex flex-col bg-bg text-text selection:bg-maple selection:text-bg">
       {announcement && (
         <div className="bg-maple text-bg py-2 px-6 text-center font-ui text-[10px] font-bold uppercase tracking-widest z-[110] relative">
-          <span className="mr-2">📢</span>
           {announcement}
         </div>
       )}
@@ -70,10 +69,6 @@ export default function Layout({ children, activeTab, setActiveTab, title, subti
         </ul>
 
         <div className="flex items-center gap-4">
-          <div className="nav-live hidden sm:block">
-            ⚡ UCSF 2026 LIVE
-          </div>
-          
           <button 
             className="md:hidden p-2 text-text"
             onClick={() => setIsMenuOpen(!isMenuOpen)}

@@ -29,7 +29,6 @@ const MatchCard = React.memo(({ match }: MatchCardProps) => {
       {/* Match Header */}
       <div className="px-5 py-3 bg-white/5 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <span className="text-xl filter drop-shadow-md">{match.category?.icon}</span>
           <div className="flex flex-col">
             <span className="font-ui text-[10px] font-bold text-muted uppercase tracking-[0.2em]">
               {match.category?.name} <span className="mx-2 text-subtle">|</span> M{match.match_no}
@@ -45,7 +44,7 @@ const MatchCard = React.memo(({ match }: MatchCardProps) => {
           "badge",
           isLive ? "badge-live" : isCompleted ? "badge-completed" : "badge-upcoming"
         )}>
-          {isLive ? "🔴 Live" : isCompleted ? "Completed" : "Upcoming"}
+          {isLive ? "Live" : isCompleted ? "Completed" : "Upcoming"}
         </div>
       </div>
 
@@ -54,10 +53,19 @@ const MatchCard = React.memo(({ match }: MatchCardProps) => {
           {/* Team 1 */}
           <div className="flex-1 flex flex-col items-center text-center gap-3 group/team">
             <div 
-              className="w-16 h-16 flex items-center justify-center text-3xl relative transition-transform group-hover/team:scale-110"
+              className="w-16 h-16 flex items-center justify-center relative transition-transform group-hover/team:scale-110 overflow-hidden"
             >
               <div className="absolute inset-0 blur-xl opacity-20" style={{ backgroundColor: match.team1?.color }} />
-              <span className="relative z-10">{match.team1?.mascot}</span>
+              {match.team1?.logo_url ? (
+                <img 
+                  src={match.team1?.logo_url} 
+                  alt={match.team1?.name} 
+                  className="w-full h-full object-contain relative z-10 p-2" 
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <span className="relative z-10 text-xl font-display text-muted">{match.team1?.name?.[0]}</span>
+              )}
             </div>
             <span className="font-display text-lg text-text tracking-wide uppercase">{match.team1?.name}</span>
           </div>
@@ -84,10 +92,19 @@ const MatchCard = React.memo(({ match }: MatchCardProps) => {
           {/* Team 2 */}
           <div className="flex-1 flex flex-col items-center text-center gap-3 group/team">
             <div 
-              className="w-16 h-16 flex items-center justify-center text-3xl relative transition-transform group-hover/team:scale-110"
+              className="w-16 h-16 flex items-center justify-center relative transition-transform group-hover/team:scale-110 overflow-hidden"
             >
               <div className="absolute inset-0 blur-xl opacity-20" style={{ backgroundColor: match.team2?.color }} />
-              <span className="relative z-10">{match.team2?.mascot}</span>
+              {match.team2?.logo_url ? (
+                <img 
+                  src={match.team2?.logo_url} 
+                  alt={match.team2?.name} 
+                  className="w-full h-full object-contain relative z-10 p-2" 
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <span className="relative z-10 text-xl font-display text-muted">{match.team2?.name?.[0]}</span>
+              )}
             </div>
             <span className="font-display text-lg text-text tracking-wide uppercase">{match.team2?.name}</span>
           </div>

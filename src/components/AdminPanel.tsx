@@ -172,7 +172,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
     setLoading(true);
     const { error } = await supabase.from('categories').insert([{
       name: 'New Sport',
-      icon: '🏆',
+      icon: '',
       sort_order: categories.length + 1
     }]);
     if (error) setError(error.message);
@@ -195,7 +195,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
     const { error } = await supabase.from('houses').insert([{
       name: 'New House',
       color: '#ffffff',
-      mascot: '🛡️',
+      mascot: '',
       points: 0,
       rank_pos: houses.length + 1
     }]);
@@ -294,9 +294,6 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
         >
           <div className="card-glass overflow-hidden shadow-2xl">
             <div className="p-10">
-              <div className="w-20 h-20 bg-maple flex items-center justify-center text-bg mx-auto mb-8 shadow-[0_0_30px_rgba(245,197,24,0.3)] skew-x-[-12deg]">
-                <Shield size={40} className="skew-x-[12deg]" />
-              </div>
               <h2 className="text-4xl text-center text-text mb-2 tracking-wider uppercase">Admin Access</h2>
               <p className="sec-label justify-center mb-10">Secure Control Interface • UCSF 2026</p>
               
@@ -361,9 +358,6 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
           <aside className="w-full lg:w-72 space-y-4">
             <div className="card-glass p-6">
               <div className="flex items-center gap-4 mb-8">
-                <div className="w-10 h-10 bg-maple/20 flex items-center justify-center text-maple skew-x-[-12deg]">
-                  <Shield size={20} className="skew-x-[12deg]" />
-                </div>
                 <div>
                   <h3 className="text-xl text-text tracking-wider">UCSF ADMIN</h3>
                   <p className="font-ui text-[8px] font-bold text-muted uppercase tracking-widest">v1.0.4 Stable</p>
@@ -569,7 +563,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                                 className="form-select py-1 text-[10px] w-auto"
                               >
                                 {categories.map(cat => (
-                                  <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
+                                  <option key={cat.id} value={cat.id}>{cat.name}</option>
                                 ))}
                               </select>
                               <input
@@ -595,7 +589,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                                 className="form-select py-1 text-[11px]"
                               >
                                 {houses.map(h => (
-                                  <option key={h.id} value={h.id}>{h.mascot} {h.name}</option>
+                                  <option key={h.id} value={h.id}>{h.name}</option>
                                 ))}
                               </select>
                               <select
@@ -604,7 +598,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                                 className="form-select py-1 text-[11px]"
                               >
                                 {houses.map(h => (
-                                  <option key={h.id} value={h.id}>{h.mascot} {h.name}</option>
+                                  <option key={h.id} value={h.id}>{h.name}</option>
                                 ))}
                               </select>
                             </div>
@@ -793,7 +787,10 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
               exit={{ opacity: 0, x: -20 }}
               className="space-y-6"
             >
-              <div className="flex justify-end">
+              <div className="flex justify-between items-center">
+                <p className="font-ui text-[10px] font-bold text-muted uppercase tracking-widest">
+                  Mascot Reference: Maple (Snake), Ebony (Bull), Cedar (Panther), Oak (Cheetah)
+                </p>
                 <button 
                   onClick={addHouse}
                   className="btn-primary py-2.5 px-4"
@@ -808,8 +805,12 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                   <div key={house.id} className="card-glass p-8 space-y-6">
                     <div className="flex items-center gap-6">
                       <div className="relative group">
-                        <div className="w-24 h-24 bg-white/5 flex items-center justify-center text-5xl filter drop-shadow-lg border border-border">
-                          {house.mascot}
+                        <div className="w-24 h-24 bg-white/5 flex items-center justify-center text-5xl filter drop-shadow-lg border border-border overflow-hidden">
+                          {house.logo_url ? (
+                            <img src={house.logo_url} alt={house.name} className="w-full h-full object-contain p-4" referrerPolicy="no-referrer" />
+                          ) : (
+                            <span className="text-muted text-xs font-ui uppercase tracking-widest">No Logo</span>
+                          )}
                         </div>
                         <input
                           type="text"
@@ -854,6 +855,47 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                         />
                       </div>
                     </div>
+
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="font-ui text-[10px] font-bold text-subtle uppercase tracking-widest">Logo URL</label>
+                      <div className="flex gap-3">
+                        <div className="w-10 h-10 bg-white/5 border border-border flex items-center justify-center overflow-hidden flex-shrink-0">
+                          {house.logo_url ? (
+                            <img src={house.logo_url} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                          ) : (
+                            <ImageIcon size={16} className="text-muted" />
+                          )}
+                        </div>
+                        <input
+                          type="text"
+                          defaultValue={house.logo_url || ''}
+                          placeholder="https://example.com/logo.png"
+                          className="flex-1 px-3 py-2 bg-bg2 border border-border text-text text-xs"
+                          onBlur={(e) => updateHouse(house.id, { logo_url: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="font-ui text-[10px] font-bold text-subtle uppercase tracking-widest">Banner URL</label>
+                      <div className="flex gap-3">
+                        <div className="w-10 h-10 bg-white/5 border border-border flex items-center justify-center overflow-hidden flex-shrink-0">
+                          {house.banner_url ? (
+                            <img src={house.banner_url} alt="Banner" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          ) : (
+                            <ImageIcon size={16} className="text-muted" />
+                          )}
+                        </div>
+                        <input
+                          type="text"
+                          defaultValue={house.banner_url || ''}
+                          placeholder="https://example.com/banner.jpg"
+                          className="flex-1 px-3 py-2 bg-bg2 border border-border text-text text-xs"
+                          onBlur={(e) => updateHouse(house.id, { banner_url: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                  </div>
 
                   <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-2">
@@ -921,7 +963,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                   <div key={cat.id} className="card-glass p-6 space-y-4">
                     <div className="flex items-center gap-4">
                       <div className="relative group w-16 h-16 bg-white/5 flex items-center justify-center text-3xl border border-border">
-                        {cat.icon}
+                        {cat.icon || <Layers size={24} className="text-muted" />}
                         <input
                           type="text"
                           defaultValue={cat.icon || ''}

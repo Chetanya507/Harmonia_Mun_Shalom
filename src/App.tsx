@@ -51,7 +51,7 @@ export default function App() {
 
   const festivalName = settings['festival_name'] || 'UCSF 2026';
   const festivalSubtitle = settings['festival_subtitle'] || 'Union of Culture & Sports Fest';
-  const festivalDates = settings['festival_dates'] || 'April 2026 · Shalom Hills';
+  const festivalDates = settings['festival_dates'] || 'April 2026 - Shalom Hills';
   const registrationOpen = settings['registration_open'] !== 'false';
   const announcementText = settings['announcement_text'];
   const footerText = settings['footer_text'];
@@ -73,7 +73,7 @@ export default function App() {
                   animate={{ opacity: 1, y: 0 }}
                   className="hero-eyebrow mx-auto"
                 >
-                  📅 {festivalDates}
+                  {festivalDates}
                 </motion.div>
                 <motion.h1 
                   initial={{ opacity: 0, y: 20 }}
@@ -127,7 +127,7 @@ export default function App() {
                 )}
                 {upcomingItems.map(item => (
                   <div key={item.id} className="flex items-center gap-2 px-4 py-1.5 bg-white/5 border border-border text-muted font-ui text-xs font-bold tracking-wider flex-shrink-0">
-                    ⏭ {item.time_start} {item.title}
+                    {item.time_start} {item.title}
                   </div>
                 ))}
               </div>
@@ -137,7 +137,7 @@ export default function App() {
             <section className="py-32">
               <div className="max-w-7xl mx-auto px-6">
                 <div className="mb-20">
-                  <p className="sec-label">The Dynasties</p>
+                  <p className="sec-label">The Houses</p>
                   <h2 className="mb-6">Four Houses.<br />One Crown.</h2>
                   <p className="text-muted max-w-xl text-lg">Each house carries the spirit, pride, and legacy of its warriors.</p>
                 </div>
@@ -163,7 +163,7 @@ export default function App() {
                       <thead>
                         <tr className="bg-white/5 font-ui text-[10px] font-bold uppercase tracking-[0.2em] text-muted">
                           <th className="px-8 py-6">#</th>
-                          <th className="px-8 py-6">Dynasty</th>
+                          <th className="px-8 py-6">House</th>
                           <th className="px-8 py-6 text-center">Points</th>
                           <th className="px-8 py-6 text-right">Motto</th>
                         </tr>
@@ -181,8 +181,17 @@ export default function App() {
                             </td>
                             <td className="px-8 py-6">
                               <div className="flex items-center gap-6">
-                                <div className="w-12 h-12 flex items-center justify-center text-2xl bg-white/5 border border-border">
-                                  {house.mascot}
+                                <div className="w-12 h-12 flex items-center justify-center bg-white/5 border border-border overflow-hidden">
+                                  {house.logo_url ? (
+                                    <img 
+                                      src={house.logo_url} 
+                                      alt={house.name} 
+                                      className="w-full h-full object-contain p-2" 
+                                      referrerPolicy="no-referrer"
+                                    />
+                                  ) : (
+                                    <span className="text-xl font-display text-muted">{house.name[0]}</span>
+                                  )}
                                 </div>
                                 <span className="font-display text-3xl tracking-wide uppercase">{house.name}</span>
                               </div>
@@ -215,12 +224,12 @@ export default function App() {
                       The <strong className="text-white">Union of Culture & Sports Fest</strong> is the premier inter-school championship hosted by Shalom Hills International School.
                     </p>
                     <p className="text-white/60 mb-12 leading-relaxed">
-                      Four legendary houses — Maple, Cedar, Ebony, and Oak — battle across disciplines, each vying for the ultimate crown and the glory of their dynasty.
+                      Four legendary houses — Maple, Cedar, Ebony, and Oak — battle across disciplines, each vying for the ultimate crown and the glory of their house.
                     </p>
                     
                     <div className="grid grid-cols-2 gap-4">
                       {[
-                        { val: '4', label: 'Dynasties' },
+                        { val: '4', label: 'Houses' },
                         { val: '3', label: 'Sports' },
                         { val: '6', label: 'Matches' },
                         { val: '1', label: 'Champion' },
@@ -319,7 +328,6 @@ export default function App() {
                 return (
                   <section key={cat.id} className="space-y-12">
                     <div className="flex items-center gap-4 border-b border-white/5 pb-4">
-                      <span className="text-4xl filter drop-shadow-md">{cat.icon}</span>
                       <h3 className="text-4xl tracking-wider uppercase font-display">{cat.name}</h3>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -338,7 +346,7 @@ export default function App() {
         return (
           <div className="max-w-7xl mx-auto px-6 py-24">
             <div className="mb-16">
-              <p className="sec-label">Dynasties</p>
+              <p className="sec-label">Houses</p>
               <h2 className="text-6xl md:text-7xl">The Houses</h2>
               <p className="text-white/40 mt-4">The four pillars of UCSF 2026.</p>
             </div>

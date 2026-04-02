@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { House } from '../types';
 import { cn } from '../lib/utils';
-import { Trophy } from 'lucide-react';
+import { Trophy, Shield } from 'lucide-react';
 
 interface HouseCardProps {
   house: House;
@@ -20,9 +20,22 @@ const HouseCard = React.memo(({ house, isTop }: HouseCardProps) => {
         isTop ? "before:bg-maple border-maple/20 bg-maple/5 shadow-[0_0_30px_rgba(245,197,24,0.05)]" : "before:bg-border"
       )}
     >
+      {/* Banner Background */}
+      {house.banner_url && (
+        <div className="absolute inset-0 opacity-10 group-hover:opacity-20 transition-opacity duration-500">
+          <img 
+            src={house.banner_url} 
+            alt={`${house.name} Banner`} 
+            className="w-full h-full object-cover"
+            referrerPolicy="no-referrer"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-bg via-bg/80 to-transparent" />
+        </div>
+      )}
+
       {/* Rank Badge */}
       <div className={cn(
-        "absolute top-0 right-0 w-12 h-12 flex items-center justify-center font-display text-2xl skew-x-[-12deg] origin-top-right",
+        "absolute top-0 right-0 w-12 h-12 flex items-center justify-center font-display text-2xl skew-x-[-12deg] origin-top-right z-20",
         house.rank_pos === 1 ? "bg-maple text-bg" :
         house.rank_pos === 2 ? "bg-slate-300 text-bg" :
         house.rank_pos === 3 ? "bg-orange-400 text-bg" : "bg-white/10 text-muted"
@@ -30,13 +43,22 @@ const HouseCard = React.memo(({ house, isTop }: HouseCardProps) => {
         <span className="skew-x-[12deg]">{house.rank_pos}</span>
       </div>
 
-      <div className="p-6">
+      <div className="p-6 relative z-10">
         <div className="flex items-center gap-5 mb-8">
           <div 
-            className="w-20 h-20 flex items-center justify-center text-5xl relative"
+            className="w-20 h-20 flex items-center justify-center relative"
           >
             <div className="absolute inset-0 blur-2xl opacity-20" style={{ backgroundColor: house.color }} />
-            <span className="relative z-10 filter drop-shadow-lg">{house.mascot || '🛡️'}</span>
+            {house.logo_url ? (
+              <img 
+                src={house.logo_url} 
+                alt={`${house.name} Logo`} 
+                className="w-full h-full object-contain relative z-10 filter drop-shadow-lg"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <Shield className="relative z-10 filter drop-shadow-lg text-muted" size={48} />
+            )}
           </div>
           <div>
             <h3 className="text-2xl font-display tracking-wider text-text group-hover:text-maple transition-colors">{house.name}</h3>

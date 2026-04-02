@@ -4,6 +4,8 @@ export type House = {
   color: string;
   mascot: string | null;
   mascot_name: string | null;
+  logo_url?: string | null;
+  banner_url?: string | null;
   points: number;
   rank_pos: number;
   motto: string | null;
