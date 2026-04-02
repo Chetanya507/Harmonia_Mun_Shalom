@@ -14,6 +14,8 @@ export type Category = {
   name: string;
   icon: string | null;
   sort_order: number;
+  gender: string | null;
+  eligible_years: string | null;
 };
 
 export type MatchStatus = 'upcoming' | 'live' | 'completed';

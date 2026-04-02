@@ -11,6 +11,8 @@ import { cn } from './lib/utils';
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
   const { houses, matches, schedule, settings, categories, loading, error, refresh } = useUCSFData();
+  const liveItems = React.useMemo(() => schedule.filter(s => s.status === 'live'), [schedule]);
+  const upcomingItems = React.useMemo(() => schedule.filter(s => s.status === 'upcoming').slice(0, 3), [schedule]);
 
   if (loading) {
     return (
@@ -52,21 +54,24 @@ export default function App() {
         return (
           <div className="space-y-0">
             {/* HERO */}
-            <section className="relative py-24 md:py-32 overflow-hidden border-b border-white/5">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(245,197,24,0.05)_0%,transparent_70%)]" />
-              <div className="max-w-7xl mx-auto px-6 relative text-center">
+            <section className="relative py-32 md:py-48 overflow-hidden border-b border-border">
+              {/* Hero Orbs */}
+              <div className="absolute top-[-200px] left-[-100px] w-[500px] h-[500px] bg-ebony opacity-[0.18] blur-[100px] rounded-full animate-[orbdrift_10s_ease-in-out_infinite_alternate]" />
+              <div className="absolute bottom-[-100px] right-[-80px] w-[400px] h-[400px] bg-maple opacity-[0.15] blur-[100px] rounded-full animate-[orbdrift_12s_ease-in-out_infinite_alternate-reverse]" />
+              
+              <div className="max-w-7xl mx-auto px-6 relative z-10 text-center">
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="sec-label justify-center"
+                  className="hero-eyebrow mx-auto"
                 >
-                  🏫 Shalom Hills International School
+                  📅 April 2026 · Shalom Hills
                 </motion.div>
                 <motion.h1 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 }}
-                  className="text-7xl md:text-9xl font-display leading-[0.9] mb-6"
+                  className="hero-title mb-6"
                 >
                   UCSF<br />
                   <span className="text-transparent bg-clip-text bg-gradient-to-br from-maple to-white">2026</span>
@@ -75,41 +80,60 @@ export default function App() {
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.2 }}
-                  className="font-ui text-lg md:text-xl font-bold uppercase tracking-[0.4em] text-white/60 mb-4"
+                  className="hero-sub mb-12"
                 >
                   Union of Culture & Sports Fest
-                </motion.p>
-                <motion.p 
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.3 }}
-                  className="font-ui text-[10px] md:text-xs font-bold uppercase tracking-[0.3em] text-white/30 mb-12"
-                >
-                  Where Dynasties Rise · Legends Are Born · April 2026
                 </motion.p>
                 
                 <motion.div 
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
+                  transition={{ delay: 0.3 }}
                   className="flex flex-wrap justify-center gap-4"
                 >
-                  <button onClick={() => setActiveTab('home')} className="btn-primary">Live Standings</button>
+                  <button onClick={() => {
+                    const el = document.getElementById('scoreboard');
+                    el?.scrollIntoView({ behavior: 'smooth' });
+                  }} className="btn-primary">Live Standings</button>
                   <button onClick={() => setActiveTab('matches')} className="btn-ghost">View Fixtures</button>
                   <button onClick={() => setActiveTab('schedule')} className="btn-ghost">Full Schedule</button>
                 </motion.div>
               </div>
             </section>
 
-            {/* HOUSES */}
-            <section className="py-24 bg-bg-dark">
-              <div className="max-w-7xl mx-auto px-6">
-                <div className="mb-16">
-                  <p className="sec-label">The Dynasties</p>
-                  <h2 className="text-5xl md:text-6xl mb-4">Four Houses.<br />One Crown.</h2>
-                  <p className="text-white/40 max-w-xl">Each house carries the spirit, pride, and legacy of its warriors.</p>
+            {/* LIVE BAR */}
+            <div className="sticky top-[62px] z-40 bg-bg3/90 backdrop-blur-md border-b border-border py-3 px-6 overflow-x-auto">
+              <div className="max-w-7xl mx-auto flex items-center gap-6 whitespace-nowrap">
+                <div className="font-ui text-[10px] font-bold text-muted uppercase tracking-[3px] flex-shrink-0">
+                  Live & Up Next
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {liveItems.length > 0 ? (
+                  liveItems.map(item => (
+                    <div key={item.id} className="flex items-center gap-2 px-4 py-1.5 bg-danger/10 border border-danger/30 text-danger font-ui text-xs font-bold tracking-wider flex-shrink-0">
+                      <div className="w-1.5 h-1.5 rounded-full bg-danger animate-pulse" />
+                      LIVE: {item.title}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-muted font-ui text-xs font-bold tracking-wider">No live events right now</div>
+                )}
+                {upcomingItems.map(item => (
+                  <div key={item.id} className="flex items-center gap-2 px-4 py-1.5 bg-white/5 border border-border text-muted font-ui text-xs font-bold tracking-wider flex-shrink-0">
+                    ⏭ {item.time_start} {item.title}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* HOUSES */}
+            <section className="py-32">
+              <div className="max-w-7xl mx-auto px-6">
+                <div className="mb-20">
+                  <p className="sec-label">The Dynasties</p>
+                  <h2 className="mb-6">Four Houses.<br />One Crown.</h2>
+                  <p className="text-muted max-w-xl text-lg">Each house carries the spirit, pride, and legacy of its warriors.</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                   {houses.map((house) => (
                     <HouseCard key={house.id} house={house} isTop={house.rank_pos === 1} />
                   ))}
@@ -118,48 +142,48 @@ export default function App() {
             </section>
 
             {/* SCOREBOARD */}
-            <section id="scoreboard" className="py-24 bg-bg-card border-y border-white/5">
+            <section id="scoreboard" className="py-32 bg-bg2/50 border-y border-border">
               <div className="max-w-7xl mx-auto px-6">
-                <div className="mb-16">
+                <div className="mb-20">
                   <p className="sec-label">Live Standings</p>
-                  <h2 className="text-5xl md:text-6xl">The Leaderboard</h2>
+                  <h2 className="text-5xl md:text-7xl">The Leaderboard</h2>
                 </div>
                 
                 <div className="card-glass overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
-                        <tr className="border-b border-white/5 font-ui text-[10px] font-bold uppercase tracking-widest text-white/40">
+                        <tr className="bg-white/5 font-ui text-[10px] font-bold uppercase tracking-[0.2em] text-muted">
                           <th className="px-8 py-6">#</th>
                           <th className="px-8 py-6">Dynasty</th>
                           <th className="px-8 py-6 text-center">Points</th>
                           <th className="px-8 py-6 text-right">Motto</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-white/5">
+                      <tbody className="divide-y divide-border">
                         {houses.map((house) => (
                           <tr key={house.id} className="group hover:bg-white/[0.02] transition-colors">
                             <td className="px-8 py-6">
                               <span className={cn(
-                                "font-display text-2xl",
-                                house.rank_pos === 1 ? "text-maple" : "text-white/60"
+                                "font-display text-3xl",
+                                house.rank_pos === 1 ? "text-maple" : "text-muted"
                               )}>
                                 {house.rank_pos.toString().padStart(2, '0')}
                               </span>
                             </td>
                             <td className="px-8 py-6">
-                              <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-lg flex items-center justify-center text-xl" style={{ backgroundColor: house.color + '20', color: house.color }}>
+                              <div className="flex items-center gap-6">
+                                <div className="w-12 h-12 flex items-center justify-center text-2xl bg-white/5 border border-border">
                                   {house.mascot}
                                 </div>
-                                <span className="font-display text-2xl tracking-wide">{house.name}</span>
+                                <span className="font-display text-3xl tracking-wide uppercase">{house.name}</span>
                               </div>
                             </td>
                             <td className="px-8 py-6 text-center">
-                              <span className="font-display text-3xl text-maple">{house.points}</span>
+                              <span className="font-display text-4xl text-maple">{house.points}</span>
                             </td>
                             <td className="px-8 py-6 text-right">
-                              <span className="font-ui text-[10px] font-bold uppercase tracking-widest text-white/20 group-hover:text-white/40 transition-colors">
+                              <span className="font-ui text-[10px] font-bold uppercase tracking-widest text-subtle group-hover:text-muted transition-colors">
                                 {house.motto}
                               </span>
                             </td>
@@ -239,24 +263,30 @@ export default function App() {
       case 'schedule':
         const days = Array.from(new Set(schedule.map(s => s.day_label)));
         return (
-          <div className="max-w-7xl mx-auto px-6 py-24">
-            <div className="mb-16">
+          <div id="schedule" className="max-w-7xl mx-auto px-6 py-32 relative z-10">
+            <div className="mb-20">
               <p className="sec-label">Event Schedule</p>
-              <h2 className="text-6xl md:text-7xl">The Timeline</h2>
+              <h2 className="text-6xl md:text-8xl">The Timeline</h2>
+              <p className="text-muted mt-4 text-lg">Full Two-Day Programme — UCSF 2026</p>
             </div>
             
-            <div className="space-y-24">
+            <div className="space-y-32">
               {days.map(day => (
-                <div key={day} className="space-y-12">
-                  <div className="flex items-end gap-4 border-b border-white/5 pb-4">
-                    <h3 className="text-4xl text-maple">{day}</h3>
-                    <span className="font-ui text-sm font-bold uppercase tracking-widest text-white/20 mb-1">
+                <div key={day} className="space-y-16">
+                  <div className="flex items-end gap-6 border-b border-border pb-6">
+                    <h3 className="text-5xl text-maple uppercase tracking-wider">{day}</h3>
+                    <span className="font-ui text-sm font-bold uppercase tracking-[0.3em] text-muted mb-2">
                       {schedule.find(s => s.day_label === day)?.day_date}
                     </span>
                   </div>
-                  <div className="grid gap-6">
-                    {schedule.filter(s => s.day_label === day).map(item => (
-                      <ScheduleCard key={item.id} item={item} />
+                  <div className="timeline">
+                    {schedule.filter(s => s.day_label === day).map((item, idx) => (
+                      <ScheduleCard 
+                        key={item.id} 
+                        item={item} 
+                        index={idx} 
+                        category={categories.find(c => c.name === item.category)}
+                      />
                     ))}
                   </div>
                 </div>
@@ -271,23 +301,71 @@ export default function App() {
             <div className="mb-16">
               <p className="sec-label">Fixtures & Results</p>
               <h2 className="text-6xl md:text-7xl">Match Schedule</h2>
-              <p className="text-white/40 mt-4">Browse results by sport. Auto-refreshes every 30s.</p>
+              <p className="text-white/40 mt-4">Browse results by sport. Real-time updates enabled.</p>
             </div>
 
             <div className="space-y-24">
-              {categories.map(cat => (
-                <section key={cat.id} className="space-y-12">
-                  <div className="flex items-center gap-4 border-b border-white/5 pb-4">
-                    <span className="text-4xl">{cat.icon}</span>
-                    <h3 className="text-4xl tracking-wider">{cat.name}</h3>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {matches.filter(m => m.category_id === cat.id).map(match => (
-                      <MatchCard key={match.id} match={match} />
-                    ))}
-                  </div>
-                </section>
+              {categories.map(cat => {
+                const catMatches = matches.filter(m => m.category_id === cat.id);
+                if (catMatches.length === 0) return null;
+                return (
+                  <section key={cat.id} className="space-y-12">
+                    <div className="flex items-center gap-4 border-b border-white/5 pb-4">
+                      <span className="text-4xl filter drop-shadow-md">{cat.icon}</span>
+                      <h3 className="text-4xl tracking-wider uppercase font-display">{cat.name}</h3>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {catMatches.map(match => (
+                        <MatchCard key={match.id} match={match} />
+                      ))}
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
+          </div>
+        );
+
+      case 'houses':
+        return (
+          <div className="max-w-7xl mx-auto px-6 py-24">
+            <div className="mb-16">
+              <p className="sec-label">Dynasties</p>
+              <h2 className="text-6xl md:text-7xl">The Houses</h2>
+              <p className="text-white/40 mt-4">The four pillars of UCSF 2026.</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {houses.map((house) => (
+                <HouseCard key={house.id} house={house} isTop={house.rank_pos === 1} />
               ))}
+            </div>
+          </div>
+        );
+
+      case 'brochure':
+        return (
+          <div className="max-w-7xl mx-auto px-6 py-24 h-[calc(100vh-62px)] flex flex-col">
+            <div className="mb-8">
+              <p className="sec-label">Event Guide</p>
+              <h2 className="text-6xl md:text-7xl">Brochure</h2>
+              <p className="text-white/40 mt-4">Download or view the official UCSF 2026 brochure below.</p>
+            </div>
+            <div className="flex-grow card-glass overflow-hidden relative">
+              <iframe 
+                src={settings.brochure_url || "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"} 
+                className="w-full h-full border-none"
+                title="UCSF 2026 Brochure"
+              />
+              <div className="absolute bottom-4 right-4">
+                <a 
+                  href={settings.brochure_url || "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="btn-primary"
+                >
+                  Open in New Tab
+                </a>
+              </div>
             </div>
           </div>
         );

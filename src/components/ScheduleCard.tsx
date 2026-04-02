@@ -1,71 +1,112 @@
-import { ScheduleItem } from '../types';
+import React from 'react';
+import { ScheduleItem, Category } from '../types';
 import { cn } from '../lib/utils';
-import { MapPin, Clock, Users } from 'lucide-react';
+import { MapPin } from 'lucide-react';
+import { motion } from 'motion/react';
 
 interface ScheduleCardProps {
   item: ScheduleItem;
+  category?: Category;
+  index?: number;
   key?: any;
 }
 
-export default function ScheduleCard({ item }: ScheduleCardProps) {
+const ScheduleCard = React.memo(({ item, category, index = 0 }: ScheduleCardProps) => {
   const isLive = item.status === 'live';
   const isCompleted = item.status === 'completed';
 
   return (
-    <div className={cn(
-      "relative pl-10 pb-10 border-l border-white/10 last:pb-0",
-      isLive ? "border-cedar/50" : ""
-    )}>
-      {/* Timeline Dot */}
-      <div className={cn(
-        "absolute left-[-5px] top-0 w-2.5 h-2.5 rounded-full transition-all duration-500",
-        isLive ? "bg-cedar ring-4 ring-cedar/20 scale-125" : 
-        isCompleted ? "bg-white/20" : "bg-maple shadow-[0_0_10px_rgba(245,197,24,0.5)]"
-      )} />
+    <motion.div 
+      initial={{ opacity: 0, x: -20 }}
+      whileInView={{ opacity: 1, x: 0 }}
+      viewport={{ once: true }}
+      transition={{ delay: index * 0.05 }}
+      className={cn(
+        "grid grid-cols-[80px_1fr] md:grid-cols-[120px_1fr] gap-0 items-start relative group",
+        isLive ? "st-live" : isCompleted ? "st-completed" : "st-upcoming"
+      )}
+    >
+      {/* Time Column */}
+      <div className="pt-7 pr-4 md:pr-8 text-right flex-shrink-0">
+        <div className="font-display text-lg md:text-2xl tracking-wider text-text leading-none">
+          {item.time_start}
+        </div>
+        {item.time_end && (
+          <div className="font-ui text-[10px] font-bold text-muted uppercase tracking-widest mt-1">
+            — {item.time_end}
+          </div>
+        )}
+      </div>
 
-      <div className={cn(
-        "card-glass p-6 border-white/10 transition-all group hover:border-maple/30",
-        isLive ? "bg-cedar/5 border-cedar/20" : ""
-      )}>
-        <div className="flex flex-wrap items-start justify-between gap-6 mb-4">
-          <div className="flex-1 min-w-[200px]">
-            <div className="flex items-center gap-3 mb-2">
-              <h4 className="text-xl font-display tracking-wider text-white group-hover:text-maple transition-colors">{item.title}</h4>
-              {isLive && (
-                <span className="px-2 py-0.5 bg-cedar text-white text-[9px] font-black uppercase tracking-widest skew-x-[-12deg] animate-pulse">
-                  <span className="inline-block skew-x-[12deg]">Live</span>
-                </span>
+      {/* Body Column */}
+      <div className="relative pl-8 md:pl-12 pb-12 border-l border-border group-last:pb-0">
+        {/* Node Dot */}
+        <div className={cn(
+          "absolute left-[-6px] top-7 w-3 h-3 rounded-full border-2 border-bg z-10 transition-all duration-500",
+          isLive ? "bg-danger shadow-[0_0_15px_rgba(230,57,70,0.8)] scale-125 animate-pulse" : 
+          isCompleted ? "bg-success" : "bg-bg3 ring-1 ring-border"
+        )} />
+
+        {/* Card */}
+        <div className={cn(
+          "card-glass p-6 transition-all duration-300 hover:translate-x-1 group-hover:border-white/20",
+          "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px]",
+          isLive ? "before:bg-danger bg-danger/5 border-danger/20" : 
+          isCompleted ? "before:bg-success bg-success/5 border-success/10" : 
+          "before:bg-border"
+        )}>
+          <div className="flex flex-wrap items-start justify-between gap-4 mb-3">
+            <div className="flex-1 min-w-[200px]">
+              <div className="flex items-center gap-2 mb-1">
+                {category?.icon && <span className="text-sm">{category.icon}</span>}
+                <h4 className="text-xl md:text-2xl text-text tracking-wide uppercase">
+                  {item.title}
+                </h4>
+              </div>
+              {(category?.gender || category?.eligible_years) && (
+                <div className="font-ui text-[9px] font-bold text-maple uppercase tracking-widest mb-2">
+                  {category.gender} {category.eligible_years && `· ${category.eligible_years}`}
+                </div>
+              )}
+              {item.subtitle && (
+                <p className="font-sans text-xs text-muted leading-relaxed">
+                  {item.subtitle}
+                </p>
               )}
             </div>
-            {item.subtitle && <p className="font-ui text-sm font-bold uppercase tracking-widest text-white/40">{item.subtitle}</p>}
+            
+            <div className={cn(
+              "badge",
+              isLive ? "badge-live" : isCompleted ? "badge-completed" : "badge-upcoming"
+            )}>
+              {isLive ? "🔴 Live Now" : isCompleted ? "Completed" : "Upcoming"}
+            </div>
           </div>
-          
-          <div className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-white/10 font-ui text-xs font-bold text-maple uppercase tracking-widest">
-            <Clock size={14} />
-            {item.time_start} {item.time_end && <span className="mx-1 text-white/20">—</span>} {item.time_end}
-          </div>
-        </div>
 
-        <div className="flex flex-wrap gap-6 mt-6 pt-4 border-t border-white/5">
-          {item.venue && (
-            <div className="flex items-center gap-2 font-ui text-[10px] text-white/40 font-bold uppercase tracking-widest">
-              <MapPin size={14} className="text-maple" />
-              {item.venue}
-            </div>
-          )}
-          {item.house_ids && (
-            <div className="flex items-center gap-2 font-ui text-[10px] text-white/40 font-bold uppercase tracking-widest">
-              <Users size={14} className="text-maple" />
-              {item.house_ids.split(',').map((id, idx) => (
-                <span key={id}>
-                  {id.trim()}
-                  {idx < item.house_ids!.split(',').length - 1 && <span className="mx-1 text-white/10">•</span>}
-                </span>
-              ))}
-            </div>
-          )}
+          <div className="flex flex-wrap gap-6 mt-4 pt-4 border-t border-border">
+            {item.venue && (
+              <div className="flex items-center gap-2 font-ui text-[10px] text-muted font-bold uppercase tracking-widest">
+                <MapPin size={14} className="text-maple" />
+                {item.venue}
+              </div>
+            )}
+            {item.house_ids && (
+              <div className="flex items-center gap-2">
+                {item.house_ids.split(',').map((id) => (
+                  <span 
+                    key={id}
+                    className="badge badge-upcoming border border-border text-[9px]"
+                  >
+                    {id.trim()}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
-}
+});
+
+export default ScheduleCard;

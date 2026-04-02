@@ -11,6 +11,37 @@ export function useUCSFData() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const fetchHouses = async () => {
+    const { data } = await supabase!.from('houses').select('*').order('rank_pos', { ascending: true });
+    if (data) setHouses(data);
+  };
+
+  const fetchMatches = async () => {
+    const { data } = await supabase!.from('matches').select('*, team1:team1_id(*), team2:team2_id(*), category:category_id(*)').order('id', { ascending: true });
+    if (data) setMatches(data);
+  };
+
+  const fetchSchedule = async () => {
+    const { data } = await supabase!.from('schedule').select('*').order('sort_order', { ascending: true });
+    if (data) setSchedule(data);
+  };
+
+  const fetchSettings = async () => {
+    const { data } = await supabase!.from('settings').select('*');
+    if (data) {
+      const settingsMap: Record<string, string> = {};
+      data.forEach((s: Setting) => {
+        settingsMap[s.key_name] = s.val;
+      });
+      setSettings(settingsMap);
+    }
+  };
+
+  const fetchCategories = async () => {
+    const { data } = await supabase!.from('categories').select('*').order('sort_order', { ascending: true });
+    if (data) setCategories(data);
+  };
+
   const fetchData = async () => {
     if (!supabase) {
       setError('Supabase credentials missing. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment variables in the Secrets panel.');
@@ -20,33 +51,13 @@ export function useUCSFData() {
 
     try {
       setLoading(true);
-      
-      const [
-        { data: housesData },
-        { data: matchesData },
-        { data: scheduleData },
-        { data: settingsData },
-        { data: categoriesData }
-      ] = await Promise.all([
-        supabase.from('houses').select('*').order('rank_pos', { ascending: true }),
-        supabase.from('matches').select('*, team1:team1_id(*), team2:team2_id(*), category:category_id(*)').order('id', { ascending: true }),
-        supabase.from('schedule').select('*').order('sort_order', { ascending: true }),
-        supabase.from('settings').select('*'),
-        supabase.from('categories').select('*').order('sort_order', { ascending: true })
+      await Promise.all([
+        fetchHouses(),
+        fetchMatches(),
+        fetchSchedule(),
+        fetchSettings(),
+        fetchCategories()
       ]);
-
-      if (housesData) setHouses(housesData);
-      if (matchesData) setMatches(matchesData);
-      if (scheduleData) setSchedule(scheduleData);
-      if (categoriesData) setCategories(categoriesData);
-      
-      if (settingsData) {
-        const settingsMap: Record<string, string> = {};
-        settingsData.forEach((s: Setting) => {
-          settingsMap[s.key_name] = s.val;
-        });
-        setSettings(settingsMap);
-      }
     } catch (err: any) {
       console.error('Error fetching UCSF data:', err);
       setError(err.message);
@@ -60,23 +71,33 @@ export function useUCSFData() {
     
     fetchData();
 
-    // Real-time subscriptions
+    // Real-time subscriptions - more targeted
     const housesSub = supabase.channel('houses-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'houses' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'houses' }, fetchHouses)
       .subscribe();
 
     const matchesSub = supabase.channel('matches-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, fetchMatches)
       .subscribe();
 
     const scheduleSub = supabase.channel('schedule-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'schedule' }, fetchData)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'schedule' }, fetchSchedule)
+      .subscribe();
+
+    const settingsSub = supabase.channel('settings-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, fetchSettings)
+      .subscribe();
+
+    const categoriesSub = supabase.channel('categories-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, fetchCategories)
       .subscribe();
 
     return () => {
       supabase.removeChannel(housesSub);
       supabase.removeChannel(matchesSub);
       supabase.removeChannel(scheduleSub);
+      supabase.removeChannel(settingsSub);
+      supabase.removeChannel(categoriesSub);
     };
   }, []);
 

@@ -1,3 +1,4 @@
+import React from 'react';
 import { Match } from '../types';
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
@@ -8,7 +9,7 @@ interface MatchCardProps {
   key?: any;
 }
 
-export default function MatchCard({ match }: MatchCardProps) {
+const MatchCard = React.memo(({ match }: MatchCardProps) => {
   const isLive = match.status === 'live';
   const isCompleted = match.status === 'completed';
 
@@ -17,22 +18,34 @@ export default function MatchCard({ match }: MatchCardProps) {
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      className="card-glass rounded-none border-white/10 overflow-hidden group"
+      className={cn(
+        "card-glass rounded-none border-border overflow-hidden group relative",
+        "before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px]",
+        isLive ? "before:bg-danger bg-danger/5 border-danger/20" : 
+        isCompleted ? "before:bg-success bg-success/5 border-success/10" : 
+        "before:bg-border"
+      )}
     >
       {/* Match Header */}
-      <div className="px-5 py-3 bg-white/5 border-b border-white/10 flex items-center justify-between">
+      <div className="px-5 py-3 bg-white/5 border-b border-border flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="text-xl filter drop-shadow-md">{match.category?.icon}</span>
-          <span className="font-ui text-[10px] font-bold text-white/40 uppercase tracking-[0.2em]">
-            {match.category?.name} <span className="mx-2 text-white/10">|</span> M{match.match_no}
-          </span>
+          <div className="flex flex-col">
+            <span className="font-ui text-[10px] font-bold text-muted uppercase tracking-[0.2em]">
+              {match.category?.name} <span className="mx-2 text-subtle">|</span> M{match.match_no}
+            </span>
+            {(match.category?.gender || match.category?.eligible_years) && (
+              <span className="font-ui text-[8px] font-bold text-subtle uppercase tracking-widest mt-0.5">
+                {match.category?.gender} {match.category?.eligible_years && `· ${match.category?.eligible_years}`}
+              </span>
+            )}
+          </div>
         </div>
         <div className={cn(
-          "px-3 py-1 font-ui text-[9px] font-black uppercase tracking-[0.2em] skew-x-[-12deg]",
-          isLive ? "bg-cedar text-white animate-pulse" :
-          isCompleted ? "bg-white/10 text-white/60" : "bg-ebony text-white"
+          "badge",
+          isLive ? "badge-live" : isCompleted ? "badge-completed" : "badge-upcoming"
         )}>
-          <span className="inline-block skew-x-[12deg]">{match.status}</span>
+          {isLive ? "🔴 Live" : isCompleted ? "Completed" : "Upcoming"}
         </div>
       </div>
 
@@ -46,7 +59,7 @@ export default function MatchCard({ match }: MatchCardProps) {
               <div className="absolute inset-0 blur-xl opacity-20" style={{ backgroundColor: match.team1?.color }} />
               <span className="relative z-10">{match.team1?.mascot}</span>
             </div>
-            <span className="font-display text-lg text-white tracking-wide uppercase">{match.team1?.name}</span>
+            <span className="font-display text-lg text-text tracking-wide uppercase">{match.team1?.name}</span>
           </div>
 
           {/* Score */}
@@ -54,24 +67,18 @@ export default function MatchCard({ match }: MatchCardProps) {
             <div className="flex items-center gap-4">
               <span className={cn(
                 "text-5xl font-display tabular-nums leading-none",
-                isCompleted && match.score1! > match.score2! ? "text-maple" : "text-white"
+                isCompleted && match.score1! > match.score2! ? "text-maple" : "text-text"
               )}>
                 {match.score1 ?? '-'}
               </span>
-              <span className="text-white/20 font-display text-3xl">:</span>
+              <span className="text-subtle font-display text-3xl">:</span>
               <span className={cn(
                 "text-5xl font-display tabular-nums leading-none",
-                isCompleted && match.score2! > match.score1! ? "text-maple" : "text-white"
+                isCompleted && match.score2! > match.score1! ? "text-maple" : "text-text"
               )}>
                 {match.score2 ?? '-'}
               </span>
             </div>
-            {isLive && (
-              <div className="flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-cedar animate-ping" />
-                <span className="font-ui text-[10px] font-bold text-cedar uppercase tracking-widest">Live</span>
-              </div>
-            )}
           </div>
 
           {/* Team 2 */}
@@ -82,20 +89,20 @@ export default function MatchCard({ match }: MatchCardProps) {
               <div className="absolute inset-0 blur-xl opacity-20" style={{ backgroundColor: match.team2?.color }} />
               <span className="relative z-10">{match.team2?.mascot}</span>
             </div>
-            <span className="font-display text-lg text-white tracking-wide uppercase">{match.team2?.name}</span>
+            <span className="font-display text-lg text-text tracking-wide uppercase">{match.team2?.name}</span>
           </div>
         </div>
 
         {/* Venue & Time */}
-        <div className="mt-8 pt-6 border-t border-white/5 flex flex-wrap gap-6 justify-center">
+        <div className="mt-8 pt-6 border-t border-border flex flex-wrap gap-6 justify-center">
           {match.venue && (
-            <div className="flex items-center gap-2 font-ui text-[10px] text-white/40 font-bold uppercase tracking-widest">
+            <div className="flex items-center gap-2 font-ui text-[10px] text-muted font-bold uppercase tracking-widest">
               <MapPin size={14} className="text-maple" />
               {match.venue}
             </div>
           )}
           {match.match_time && (
-            <div className="flex items-center gap-2 font-ui text-[10px] text-white/40 font-bold uppercase tracking-widest">
+            <div className="flex items-center gap-2 font-ui text-[10px] text-muted font-bold uppercase tracking-widest">
               <Clock size={14} className="text-maple" />
               {new Date(match.match_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </div>
@@ -104,4 +111,6 @@ export default function MatchCard({ match }: MatchCardProps) {
       </div>
     </motion.div>
   );
-}
+});
+
+export default MatchCard;
