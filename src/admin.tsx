@@ -17,7 +17,7 @@ const AdminPage = () => {
 import { useUCSFData } from './hooks/useUCSFData';
 
 const AdminWrapper = () => {
-  const { houses, matches, schedule, settings, categories, gallery, refresh, loading, error } = useUCSFData();
+  const { houses, matches, schedule, settings, categories, gallery, refresh, loading, isRefreshing, error } = useUCSFData();
 
   if (loading) {
     return (
@@ -28,26 +28,24 @@ const AdminWrapper = () => {
     );
   }
 
-  if (error) {
-    return (
-      <div className="card-glass p-12 text-center border-danger/20">
-        <h2 className="text-2xl text-text mb-4">Database Connection Error</h2>
-        <p className="text-muted mb-6 font-ui text-sm uppercase tracking-widest">{error}</p>
-        <button onClick={() => window.location.reload()} className="btn-primary">Retry</button>
-      </div>
-    );
-  }
-
   return (
-    <AdminPanel 
-      matches={matches} 
-      houses={houses} 
-      schedule={schedule}
-      categories={categories}
-      gallery={gallery}
-      settings={settings}
-      refresh={refresh} 
-    />
+    <div className="relative">
+      {isRefreshing && (
+        <div className="fixed top-4 right-4 z-[100] flex items-center gap-2 bg-bg-dark/80 backdrop-blur-md border border-maple/20 px-4 py-2 rounded-full shadow-lg">
+          <div className="w-3 h-3 border-2 border-maple/20 border-t-maple rounded-full animate-spin" />
+          <span className="text-[10px] font-bold uppercase tracking-widest text-maple">Updating...</span>
+        </div>
+      )}
+      <AdminPanel 
+        matches={matches} 
+        houses={houses} 
+        schedule={schedule}
+        categories={categories}
+        gallery={gallery}
+        settings={settings}
+        refresh={refresh} 
+      />
+    </div>
   );
 };
 

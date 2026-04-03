@@ -28,13 +28,14 @@ import {
   Image as ImageIcon,
   Video,
   Play,
-  ExternalLink
+  ExternalLink,
+  X
 } from 'lucide-react';
 import { Match, House, ScheduleItem, Category, Registration, GalleryItem } from '../types';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 
-type AdminTab = 'dashboard' | 'matches' | 'schedule' | 'houses' | 'categories' | 'brochure' | 'registrations' | 'gallery' | 'settings';
+type AdminTab = 'dashboard' | 'matches' | 'schedule' | 'houses' | 'categories' | 'brochure' | 'gallery' | 'settings';
 
 interface AdminPanelProps {
   matches: Match[];
@@ -55,8 +56,6 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
-  const [registrationFilter, setRegistrationFilter] = useState<string>('all');
-  const [registrations, setRegistrations] = useState<Registration[]>([]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -152,9 +151,23 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
   const updateHouse = async (houseId: string, updates: Partial<House>) => {
     if (!supabase) return;
     setLoading(true);
+    setError(null);
+    
+    // Clean up numeric values
+    if ('points' in updates && typeof updates.points === 'number' && isNaN(updates.points)) {
+      updates.points = 0;
+    }
+    if ('rank_pos' in updates && typeof updates.rank_pos === 'number' && isNaN(updates.rank_pos)) {
+      updates.rank_pos = 1;
+    }
+
     const { error } = await supabase.from('houses').update(updates).eq('id', houseId);
-    if (error) setError(error.message);
-    else refresh();
+    if (error) {
+      console.error('Error updating house:', error);
+      setError(`Failed to update house: ${error.message}`);
+    } else {
+      refresh();
+    }
     setLoading(false);
   };
 
@@ -222,21 +235,6 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
     setLoading(false);
   };
 
-  const fetchRegistrations = async () => {
-    if (!supabase) return;
-    const { data } = await supabase.from('registrations').select('*').order('created_at', { ascending: false });
-    if (data) setRegistrations(data);
-  };
-
-  const deleteRegistration = async (id: number) => {
-    if (!supabase || !window.confirm('Delete this registration?')) return;
-    setLoading(true);
-    const { error } = await supabase.from('registrations').delete().eq('id', id);
-    if (error) setError(error.message);
-    else fetchRegistrations();
-    setLoading(false);
-  };
-
   const addGalleryItem = async (item: Omit<GalleryItem, 'id' | 'created_at'>) => {
     if (!supabase) return;
     setLoading(true);
@@ -256,10 +254,22 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
   };
 
   React.useEffect(() => {
-    if (session) {
-      fetchRegistrations();
-    }
-  }, [session]);
+    if (!supabase) return;
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) setSession(session);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const filteredMatches = useMemo(() => {
     return matches.filter(m => {
@@ -373,7 +383,6 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                   { id: 'categories', label: 'Categories', icon: Layers },
                   { id: 'brochure', label: 'Brochure', icon: FileText },
                   { id: 'gallery', label: 'Gallery', icon: ImageIcon },
-                  { id: 'registrations', label: 'Registrations', icon: Users },
                   { id: 'settings', label: 'Settings', icon: SettingsIcon },
                 ].map((item) => (
                   <button
@@ -423,6 +432,33 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
 
           {/* Main Content */}
           <main className="flex-1 space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-3xl text-text tracking-wider uppercase">{activeTab}</h2>
+              {loading && (
+                <div className="flex items-center gap-2 text-maple font-ui text-[10px] font-bold uppercase tracking-widest">
+                  <RefreshCw size={14} className="animate-spin" />
+                  Syncing...
+                </div>
+              )}
+            </div>
+
+            {error && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="card-glass p-4 border-danger/30 bg-danger/5 flex items-center gap-4 text-danger"
+              >
+                <AlertCircle size={20} />
+                <div className="flex-1">
+                  <p className="font-ui text-[10px] font-bold uppercase tracking-widest">System Error</p>
+                  <p className="text-xs opacity-80">{error}</p>
+                </div>
+                <button onClick={() => setError(null)} className="p-2 hover:bg-danger/10 rounded-full transition-colors">
+                  <X size={16} />
+                </button>
+              </motion.div>
+            )}
+
             <AnimatePresence mode="wait">
               {activeTab === 'dashboard' && (
                 <motion.div
@@ -812,12 +848,6 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                             <span className="text-muted text-xs font-ui uppercase tracking-widest">No Logo</span>
                           )}
                         </div>
-                        <input
-                          type="text"
-                          defaultValue={house.mascot || ''}
-                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                          onBlur={(e) => updateHouse(house.id, { mascot: e.target.value })}
-                        />
                         <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-maple text-bg flex items-center justify-center rounded-full shadow-lg pointer-events-none">
                           <Edit2 size={14} />
                         </div>
@@ -846,13 +876,28 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                             <Trash2 size={16} />
                           </button>
                         </div>
-                        <input
-                          type="text"
-                          defaultValue={house.mascot_name || ''}
-                          placeholder="Mascot Name"
-                          className="w-full bg-transparent border-b border-border font-ui text-[10px] font-bold text-muted uppercase tracking-widest focus:border-maple outline-none"
-                          onBlur={(e) => updateHouse(house.id, { mascot_name: e.target.value })}
-                        />
+                        <div className="flex gap-4">
+                          <div className="flex-1 space-y-1">
+                            <label className="font-ui text-[8px] font-bold text-subtle uppercase tracking-widest">Mascot Emoji</label>
+                            <input
+                              type="text"
+                              defaultValue={house.mascot || ''}
+                              placeholder="e.g. 🐍"
+                              className="w-full bg-transparent border-b border-border font-ui text-xl text-text focus:border-maple outline-none"
+                              onBlur={(e) => updateHouse(house.id, { mascot: e.target.value })}
+                            />
+                          </div>
+                          <div className="flex-[2] space-y-1">
+                            <label className="font-ui text-[8px] font-bold text-subtle uppercase tracking-widest">Mascot Name</label>
+                            <input
+                              type="text"
+                              defaultValue={house.mascot_name || ''}
+                              placeholder="e.g. The Viper"
+                              className="w-full bg-transparent border-b border-border font-ui text-[10px] font-bold text-muted uppercase tracking-widest focus:border-maple outline-none"
+                              onBlur={(e) => updateHouse(house.id, { mascot_name: e.target.value })}
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
 
@@ -1116,136 +1161,6 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
             </motion.div>
           )}
 
-          {activeTab === 'registrations' && (
-            <motion.div
-              key="registrations"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-6"
-            >
-              <div className="card-glass p-8">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-                  <div className="flex items-center gap-4">
-                    <h3 className="text-2xl text-text tracking-wide">Event Registrations</h3>
-                    <button 
-                      onClick={fetchRegistrations}
-                      className="p-2 text-muted hover:text-maple transition-colors"
-                      title="Refresh Registrations"
-                    >
-                      <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <label className="form-label whitespace-nowrap mb-0">Filter by Event:</label>
-                    <select
-                      className="form-input w-auto min-w-[200px]"
-                      onChange={(e) => setRegistrationFilter(e.target.value)}
-                      value={registrationFilter}
-                    >
-                      <option value="all">All Events</option>
-                      {schedule.map(event => (
-                        <option key={event.id} value={event.id.toString()}>
-                          {event.title}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-white/5 font-ui text-[10px] font-bold uppercase tracking-[0.2em] text-muted">
-                        <th className="px-8 py-6">Student Name</th>
-                        <th className="px-8 py-6">Event</th>
-                        <th className="px-8 py-6">Class & Section</th>
-                        <th className="px-8 py-6">File</th>
-                        <th className="px-8 py-6">Registered At</th>
-                        <th className="px-8 py-6 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {registrations
-                        .filter(reg => registrationFilter === 'all' || reg.event_id?.toString() === registrationFilter)
-                        .map(reg => (
-                        <tr key={reg.id} className="group hover:bg-white/[0.02] transition-colors">
-                          <td className="px-8 py-6">
-                            <span className="font-display text-lg tracking-wide uppercase">{reg.student_name}</span>
-                          </td>
-                          <td className="px-8 py-6">
-                            <span className="font-ui text-xs font-bold text-maple uppercase tracking-widest">{reg.event_name}</span>
-                          </td>
-                          <td className="px-8 py-6">
-                            <span className="font-ui text-xs font-bold uppercase tracking-widest text-muted">
-                              {reg.student_class} - {reg.student_section}
-                            </span>
-                          </td>
-                          <td className="px-8 py-6">
-                            {reg.file_url ? (
-                              <div className="flex flex-col gap-2">
-                                <a 
-                                  href={reg.file_url} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="flex items-center gap-2 text-maple hover:underline font-ui text-[10px] font-bold uppercase tracking-widest"
-                                >
-                                  <ExternalLink size={14} />
-                                  View Full File
-                                </a>
-                                {reg.file_url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                                  <div className="w-24 h-24 rounded-lg overflow-hidden border border-border bg-white/5">
-                                    <img 
-                                      src={reg.file_url} 
-                                      alt="Preview" 
-                                      className="w-full h-full object-cover"
-                                      referrerPolicy="no-referrer"
-                                    />
-                                  </div>
-                                ) : reg.file_url.match(/\.(mp4|webm|ogg)$/i) ? (
-                                  <div className="w-24 h-24 rounded-lg overflow-hidden border border-border bg-white/5 flex items-center justify-center text-muted">
-                                    <Play size={24} />
-                                  </div>
-                                ) : (
-                                  <div className="w-24 h-24 rounded-lg overflow-hidden border border-border bg-white/5 flex items-center justify-center text-muted">
-                                    <FileText size={24} />
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="font-ui text-[10px] font-bold uppercase tracking-widest text-subtle">No File</span>
-                            )}
-                          </td>
-                          <td className="px-8 py-6">
-                            <span className="font-ui text-[10px] font-bold uppercase tracking-widest text-subtle">
-                              {new Date(reg.created_at).toLocaleString()}
-                            </span>
-                          </td>
-                          <td className="px-8 py-6 text-right">
-                            <button
-                              onClick={() => deleteRegistration(reg.id)}
-                              className="p-2 text-muted hover:text-danger transition-colors"
-                              title="Delete Registration"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                      {registrations.length === 0 && (
-                        <tr>
-                          <td colSpan={6} className="px-8 py-12 text-center text-muted font-ui text-xs font-bold uppercase tracking-widest">
-                            No registrations found
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </motion.div>
-          )}
-
           {activeTab === 'gallery' && (
             <motion.div
               key="gallery"
@@ -1262,7 +1177,9 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                       onClick={() => {
                         const title = prompt('Enter title:');
                         const url = prompt('Enter image URL:');
-                        if (title && url) addGalleryItem({ title, type: 'image', url, thumbnail_url: null });
+                        const yearStr = prompt('Enter year (2025 or 2026):', '2026');
+                        const year = parseInt(yearStr || '2026');
+                        if (title && url) addGalleryItem({ title, type: 'image', url, thumbnail_url: null, year });
                       }}
                       className="btn-ghost flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest"
                     >
@@ -1273,7 +1190,9 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                       onClick={() => {
                         const title = prompt('Enter title:');
                         const url = prompt('Enter video URL (YouTube/Direct):');
-                        if (title && url) addGalleryItem({ title, type: 'video', url, thumbnail_url: null });
+                        const yearStr = prompt('Enter year (2025 or 2026):', '2026');
+                        const year = parseInt(yearStr || '2026');
+                        if (title && url) addGalleryItem({ title, type: 'video', url, thumbnail_url: null, year });
                       }}
                       className="btn-ghost flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest"
                     >
@@ -1427,6 +1346,42 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                         <option value="false">Closed (Disabled)</option>
                       </select>
                       <p className="text-[10px] text-muted mt-2 uppercase tracking-widest">Controls the visibility of the registration form</p>
+                    </div>
+
+                    <div className="space-y-6 pt-8 border-t border-border">
+                      <h4 className="font-ui text-xs font-bold uppercase tracking-[0.2em] text-maple pb-4 border-b border-white/5">Google Form Links</h4>
+                      <div className="grid grid-cols-1 gap-6">
+                        <div className="space-y-2">
+                          <label className="form-label">Sports Registration Form URL</label>
+                          <input
+                            type="text"
+                            defaultValue={settings['google_form_sports'] || ''}
+                            onBlur={(e) => updateSetting('google_form_sports', e.target.value)}
+                            className="form-input"
+                            placeholder="https://forms.gle/..."
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="form-label">Cultural Registration Form URL</label>
+                          <input
+                            type="text"
+                            defaultValue={settings['google_form_cultural'] || ''}
+                            onBlur={(e) => updateSetting('google_form_cultural', e.target.value)}
+                            className="form-input"
+                            placeholder="https://forms.gle/..."
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="form-label">Volunteer Signup Form URL</label>
+                          <input
+                            type="text"
+                            defaultValue={settings['google_form_volunteer'] || ''}
+                            onBlur={(e) => updateSetting('google_form_volunteer', e.target.value)}
+                            className="form-input"
+                            placeholder="https://forms.gle/..."
+                          />
+                        </div>
+                      </div>
                     </div>
 
                     <div className="form-group">

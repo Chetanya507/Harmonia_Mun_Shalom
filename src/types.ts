@@ -78,5 +78,6 @@ export type GalleryItem = {
   type: 'image' | 'video';
   url: string;
   thumbnail_url: string | null;
+  year?: number; // 2025 or 2026
   created_at: string;
 };

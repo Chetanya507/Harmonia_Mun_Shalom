@@ -3,14 +3,14 @@ import Layout from './components/Layout';
 import HouseCard from './components/HouseCard';
 import MatchCard from './components/MatchCard';
 import ScheduleCard from './components/ScheduleCard';
-import RegistrationForm from './components/RegistrationForm';
 import { useUCSFData } from './hooks/useUCSFData';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trophy, Activity, Calendar, Shield, Loader2, AlertCircle, ChevronRight, Play, Image as ImageIcon, Video } from 'lucide-react';
+import { Trophy, Activity, Calendar, Shield, Loader2, AlertCircle, ChevronRight, Play, Image as ImageIcon, Video, ExternalLink } from 'lucide-react';
 import { cn } from './lib/utils';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
+  const [galleryYear, setGalleryYear] = useState<'all' | 2025 | 2026>('all');
   const { houses, matches, schedule, settings, categories, gallery, loading, error, refresh } = useUCSFData();
   const liveItems = React.useMemo(() => schedule.filter(s => s.status === 'live'), [schedule]);
   const upcomingItems = React.useMemo(() => schedule.filter(s => s.status === 'upcoming').slice(0, 3), [schedule]);
@@ -387,6 +387,12 @@ export default function App() {
         );
 
       case 'register':
+        const googleForms = [
+          { title: 'Sports Registration', url: settings['google_form_sports'] || 'https://forms.google.com' },
+          { title: 'Cultural Registration', url: settings['google_form_cultural'] || 'https://forms.google.com' },
+          { title: 'Volunteer Signup', url: settings['google_form_volunteer'] || 'https://forms.google.com' },
+        ];
+
         return (
           <div className="max-w-4xl mx-auto px-6 py-24">
             <div className="mb-16">
@@ -394,13 +400,30 @@ export default function App() {
               <h2 className="text-6xl md:text-7xl">Register</h2>
               <p className="text-white/40 mt-4">
                 {registrationOpen 
-                  ? "Sign up for your favorite events. Limited slots available."
+                  ? "Sign up for your favorite events via the official Google Forms below."
                   : "Registrations are currently closed. Please check back later."}
               </p>
             </div>
             {registrationOpen ? (
-              <div className="card-glass p-8 md:p-12">
-                <RegistrationForm events={schedule} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {googleForms.map((form, i) => (
+                  <motion.a
+                    key={i}
+                    href={form.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    whileHover={{ y: -5, scale: 1.02 }}
+                    className="card-glass p-8 flex flex-col items-start gap-4 group hover:border-maple/40 transition-all"
+                  >
+                    <div className="w-12 h-12 bg-maple/10 text-maple rounded-xl flex items-center justify-center border border-maple/20 group-hover:bg-maple group-hover:text-bg transition-colors">
+                      <ExternalLink size={24} />
+                    </div>
+                    <div>
+                      <h3 className="text-2xl font-display tracking-wider mb-2">{form.title}</h3>
+                      <p className="font-ui text-[10px] font-bold uppercase tracking-widest text-muted">Open in Google Forms</p>
+                    </div>
+                  </motion.a>
+                ))}
               </div>
             ) : (
               <div className="card-glass p-12 text-center">
@@ -412,55 +435,89 @@ export default function App() {
         );
 
       case 'gallery':
+        const filteredGallery = gallery.filter(item => galleryYear === 'all' || item.year === galleryYear);
+
         return (
           <div className="max-w-7xl mx-auto px-6 py-24">
-            <div className="mb-16">
-              <p className="sec-label">Moments</p>
-              <h2 className="text-6xl md:text-7xl">Gallery</h2>
-              <p className="text-white/40 mt-4">Relive the highlights of UCSF 2026.</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {gallery.map((item) => (
-                <motion.div 
-                  key={item.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  className="card-glass overflow-hidden group cursor-pointer"
-                  onClick={() => window.open(item.url, '_blank')}
-                >
-                  <div className="aspect-[4/3] relative overflow-hidden">
-                    {item.type === 'image' ? (
-                      <img 
-                        src={item.url} 
-                        alt={item.title} 
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                        referrerPolicy="no-referrer"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-ebony flex items-center justify-center text-maple">
-                        <Play size={64} className="group-hover:scale-125 transition-transform duration-500" />
-                      </div>
+            <div className="mb-16 flex flex-col md:flex-row md:items-end justify-between gap-8">
+              <div>
+                <p className="sec-label">Moments</p>
+                <h2 className="text-6xl md:text-7xl">Gallery</h2>
+                <p className="text-white/40 mt-4">Relive the highlights of UCSF 2025 & 2026.</p>
+              </div>
+              
+              <div className="flex items-center gap-2 bg-white/5 p-1 border border-border rounded-lg self-start">
+                {['all', 2026, 2025].map((year) => (
+                  <button
+                    key={year}
+                    onClick={() => setGalleryYear(year as any)}
+                    className={cn(
+                      "px-6 py-2 font-ui text-[11px] font-bold uppercase tracking-widest transition-all rounded-md",
+                      galleryYear === year ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-bg/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end p-8">
-                      <div className="flex items-center gap-3 text-white font-ui text-xs font-bold uppercase tracking-widest">
-                        {item.type === 'image' ? <ImageIcon size={16} /> : <Video size={16} />}
-                        View {item.type}
+                  >
+                    {year === 'all' ? 'All Years' : year}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <AnimatePresence mode="popLayout">
+                {filteredGallery.map((item) => (
+                  <motion.div 
+                    key={item.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className="card-glass overflow-hidden group cursor-pointer"
+                    onClick={() => window.open(item.url, '_blank')}
+                  >
+                    <div className="aspect-[4/3] relative overflow-hidden">
+                      {item.type === 'image' ? (
+                        <img 
+                          src={item.url} 
+                          alt={item.title} 
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-ebony flex items-center justify-center text-maple">
+                          <Play size={64} className="group-hover:scale-125 transition-transform duration-500" />
+                        </div>
+                      )}
+                      
+                      {/* Year Badge */}
+                      <div className="absolute top-4 left-4 z-20 bg-bg/80 backdrop-blur-md border border-border px-3 py-1 font-ui text-[9px] font-bold uppercase tracking-widest text-maple">
+                        {item.year || 2026}
+                      </div>
+
+                      <div className="absolute inset-0 bg-gradient-to-t from-bg/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-end p-8">
+                        <div className="flex items-center gap-3 text-white font-ui text-xs font-bold uppercase tracking-widest">
+                          {item.type === 'image' ? <ImageIcon size={16} /> : <Video size={16} />}
+                          View {item.type}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="p-6">
-                    <h3 className="text-2xl font-display tracking-wide uppercase truncate">{item.title}</h3>
-                    <p className="font-ui text-[10px] font-bold text-muted uppercase tracking-widest mt-2">
-                      {new Date(item.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                    </p>
-                  </div>
+                    <div className="p-6">
+                      <h3 className="text-2xl font-display tracking-wide uppercase truncate">{item.title}</h3>
+                      <p className="font-ui text-[10px] font-bold text-muted uppercase tracking-widest mt-2">
+                        {new Date(item.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                      </p>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+              
+              {filteredGallery.length === 0 && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="col-span-full py-40 text-center card-glass"
+                >
+                  <p className="font-ui text-sm font-bold text-muted uppercase tracking-widest">No items found for this year. Check back soon!</p>
                 </motion.div>
-              ))}
-              {gallery.length === 0 && (
-                <div className="col-span-full py-40 text-center card-glass">
-                  <p className="font-ui text-sm font-bold text-muted uppercase tracking-widest">The gallery is currently empty. Check back soon!</p>
-                </div>
               )}
             </div>
           </div>
