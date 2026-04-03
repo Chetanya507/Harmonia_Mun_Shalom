@@ -56,6 +56,17 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => {}
+  });
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,8 +77,12 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
     setLoading(true);
     setError(null);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) setError(error.message);
-    else setSession(data.session);
+    if (error) {
+      setError(error.message);
+    } else {
+      setSession(data.session);
+      setError(null);
+    }
     setLoading(false);
   };
 
@@ -76,20 +91,43 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
     setSession(null);
   };
 
-  const updateMatch = async (matchId: number, updates: Partial<Match>) => {
-    if (!supabase) return;
-    setLoading(true);
-    const { error } = await supabase.from('matches').update(updates).eq('id', matchId);
-    if (error) setError(error.message);
-    else {
-      await supabase.rpc('recompute_points');
-      refresh();
+  const handleSupabaseError = (err: any, context: string) => {
+    console.error(`Error in ${context}:`, err);
+    if (err.message?.includes('JWT expired') || err.message?.includes('invalid_token')) {
+      setError('Your session has expired. Please log in again.');
+      setSession(null);
+    } else {
+      setError(`${context}: ${err.message}`);
     }
     setLoading(false);
   };
 
+  const checkSession = async () => {
+    if (!supabase) return false;
+    const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+    if (error || !currentSession) {
+      setSession(null);
+      setError('Session expired. Please log in again.');
+      return false;
+    }
+    setSession(currentSession);
+    return true;
+  };
+
+  const updateMatch = async (matchId: number, updates: Partial<Match>) => {
+    if (!supabase || !(await checkSession())) return;
+    setLoading(true);
+    const { error } = await supabase.from('matches').update(updates).eq('id', matchId);
+    if (error) handleSupabaseError(error, 'Failed to update match');
+    else {
+      await supabase.rpc('recompute_points');
+      refresh();
+      setLoading(false);
+    }
+  };
+
   const addMatch = async () => {
-    if (!supabase) return;
+    if (!supabase || !(await checkSession())) return;
     setLoading(true);
     const { error } = await supabase.from('matches').insert([{
       category_id: categories[0]?.id,
@@ -100,31 +138,46 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
       score1: 0,
       score2: 0
     }]);
-    if (error) setError(error.message);
-    else refresh();
-    setLoading(false);
+    if (error) handleSupabaseError(error, 'Failed to add match');
+    else {
+      refresh();
+      setLoading(false);
+    }
   };
 
   const deleteMatch = async (id: number) => {
-    if (!supabase || !window.confirm('Delete this match?')) return;
-    setLoading(true);
-    const { error } = await supabase.from('matches').delete().eq('id', id);
-    if (error) setError(error.message);
-    else refresh();
-    setLoading(false);
+    if (!supabase || !(await checkSession())) return;
+    
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Match',
+      message: 'Are you sure you want to delete this match? This action cannot be undone.',
+      onConfirm: async () => {
+        setLoading(true);
+        const { error } = await supabase.from('matches').delete().eq('id', id);
+        if (error) handleSupabaseError(error, 'Failed to delete match');
+        else {
+          refresh();
+          setLoading(false);
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    });
   };
 
   const updateSchedule = async (itemId: number, updates: Partial<ScheduleItem>) => {
-    if (!supabase) return;
+    if (!supabase || !(await checkSession())) return;
     setLoading(true);
     const { error } = await supabase.from('schedule').update(updates).eq('id', itemId);
-    if (error) setError(error.message);
-    else refresh();
-    setLoading(false);
+    if (error) handleSupabaseError(error, 'Failed to update schedule');
+    else {
+      refresh();
+      setLoading(false);
+    }
   };
 
   const addSchedule = async () => {
-    if (!supabase) return;
+    if (!supabase || !(await checkSession())) return;
     setLoading(true);
     const { error } = await supabase.from('schedule').insert([{
       day_label: 'Day 1',
@@ -134,22 +187,35 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
       status: 'upcoming',
       sort_order: schedule.length + 1
     }]);
-    if (error) setError(error.message);
-    else refresh();
-    setLoading(false);
+    if (error) handleSupabaseError(error, 'Failed to add schedule item');
+    else {
+      refresh();
+      setLoading(false);
+    }
   };
 
   const deleteSchedule = async (id: number) => {
-    if (!supabase || !window.confirm('Delete this event?')) return;
-    setLoading(true);
-    const { error } = await supabase.from('schedule').delete().eq('id', id);
-    if (error) setError(error.message);
-    else refresh();
-    setLoading(false);
+    if (!supabase || !(await checkSession())) return;
+    
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Event',
+      message: 'Are you sure you want to delete this event? This action cannot be undone.',
+      onConfirm: async () => {
+        setLoading(true);
+        const { error } = await supabase.from('schedule').delete().eq('id', id);
+        if (error) handleSupabaseError(error, 'Failed to delete schedule item');
+        else {
+          refresh();
+          setLoading(false);
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    });
   };
 
   const updateHouse = async (houseId: string, updates: Partial<House>) => {
-    if (!supabase) return;
+    if (!supabase || !(await checkSession())) return;
     setLoading(true);
     setError(null);
     
@@ -163,94 +229,138 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
 
     const { error } = await supabase.from('houses').update(updates).eq('id', houseId);
     if (error) {
-      console.error('Error updating house:', error);
-      setError(`Failed to update house: ${error.message}`);
+      handleSupabaseError(error, 'Failed to update house');
     } else {
       refresh();
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const updateCategory = async (catId: string, updates: Partial<Category>) => {
-    if (!supabase) return;
+    if (!supabase || !(await checkSession())) return;
     setLoading(true);
     const { error } = await supabase.from('categories').update(updates).eq('id', catId);
-    if (error) setError(error.message);
-    else refresh();
-    setLoading(false);
+    if (error) handleSupabaseError(error, 'Failed to update category');
+    else {
+      refresh();
+      setLoading(false);
+    }
   };
 
   const addCategory = async () => {
-    if (!supabase) return;
+    if (!supabase || !(await checkSession())) return;
     setLoading(true);
     const { error } = await supabase.from('categories').insert([{
       name: 'New Sport',
       icon: '',
       sort_order: categories.length + 1
     }]);
-    if (error) setError(error.message);
-    else refresh();
-    setLoading(false);
+    if (error) handleSupabaseError(error, 'Failed to add category');
+    else {
+      refresh();
+      setLoading(false);
+    }
   };
 
   const deleteCategory = async (id: string) => {
-    if (!supabase || !window.confirm('Delete this category? This might affect matches linked to it.')) return;
-    setLoading(true);
-    const { error } = await supabase.from('categories').delete().eq('id', id);
-    if (error) setError(error.message);
-    else refresh();
-    setLoading(false);
+    if (!supabase || !(await checkSession())) return;
+    
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Category',
+      message: 'Are you sure you want to delete this category? This might affect matches linked to it.',
+      onConfirm: async () => {
+        setLoading(true);
+        const { error } = await supabase.from('categories').delete().eq('id', id);
+        if (error) handleSupabaseError(error, 'Failed to delete category');
+        else {
+          refresh();
+          setLoading(false);
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    });
   };
 
   const addHouse = async () => {
-    if (!supabase) return;
+    if (!supabase || !(await checkSession())) return;
     setLoading(true);
     const { error } = await supabase.from('houses').insert([{
       name: 'New House',
       color: '#ffffff',
       mascot: '',
       points: 0,
-      rank_pos: houses.length + 1
+      rank_pos: houses.length + 1,
+      logo_url: 'https://api.dicebear.com/7.x/bottts/svg?seed=NewHouse',
+      banner_url: 'https://picsum.photos/seed/house/1200/400'
     }]);
-    if (error) setError(error.message);
-    else refresh();
-    setLoading(false);
+    if (error) handleSupabaseError(error, 'Failed to add house');
+    else {
+      refresh();
+      setLoading(false);
+    }
   };
 
   const deleteHouse = async (id: string) => {
-    if (!supabase || !window.confirm('Delete this house? This might affect matches linked to it.')) return;
-    setLoading(true);
-    const { error } = await supabase.from('houses').delete().eq('id', id);
-    if (error) setError(error.message);
-    else refresh();
-    setLoading(false);
+    if (!supabase || !(await checkSession())) return;
+    
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete House',
+      message: 'Are you sure you want to delete this house? This might affect matches linked to it.',
+      onConfirm: async () => {
+        setLoading(true);
+        const { error } = await supabase.from('houses').delete().eq('id', id);
+        if (error) handleSupabaseError(error, 'Failed to delete house');
+        else {
+          refresh();
+          setLoading(false);
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    });
   };
 
   const updateSetting = async (key: string, val: string) => {
-    if (!supabase) return;
+    if (!supabase || !(await checkSession())) return;
     setLoading(true);
     const { error } = await supabase.from('settings').update({ val }).eq('key_name', key);
-    if (error) setError(error.message);
-    else refresh();
-    setLoading(false);
+    if (error) handleSupabaseError(error, 'Failed to update setting');
+    else {
+      refresh();
+      setLoading(false);
+    }
   };
 
   const addGalleryItem = async (item: Omit<GalleryItem, 'id' | 'created_at'>) => {
-    if (!supabase) return;
+    if (!supabase || !(await checkSession())) return;
     setLoading(true);
     const { error } = await supabase.from('gallery').insert([item]);
-    if (error) setError(error.message);
-    else refresh();
-    setLoading(false);
+    if (error) handleSupabaseError(error, 'Failed to add gallery item');
+    else {
+      refresh();
+      setLoading(false);
+    }
   };
 
   const deleteGalleryItem = async (id: number) => {
-    if (!supabase || !window.confirm('Delete this gallery item?')) return;
-    setLoading(true);
-    const { error } = await supabase.from('gallery').delete().eq('id', id);
-    if (error) setError(error.message);
-    else refresh();
-    setLoading(false);
+    if (!supabase || !(await checkSession())) return;
+    
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Gallery Item',
+      message: 'Are you sure you want to delete this item from the gallery?',
+      onConfirm: async () => {
+        setLoading(true);
+        const { error } = await supabase.from('gallery').delete().eq('id', id);
+        if (error) handleSupabaseError(error, 'Failed to delete gallery item');
+        else {
+          refresh();
+          setLoading(false);
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    });
   };
 
   React.useEffect(() => {
@@ -594,7 +704,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                           <td className="px-8 py-6">
                             <div className="flex items-center gap-3 mb-2">
                               <select
-                                value={match.category_id}
+                                value={match.category_id || ''}
                                 onChange={(e) => updateMatch(match.id, { category_id: e.target.value })}
                                 className="form-select py-1 text-[10px] w-auto"
                               >
@@ -620,7 +730,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                           <td className="px-8 py-6">
                             <div className="space-y-2">
                               <select
-                                value={match.team1_id}
+                                value={match.team1_id || ''}
                                 onChange={(e) => updateMatch(match.id, { team1_id: e.target.value })}
                                 className="form-select py-1 text-[11px]"
                               >
@@ -629,7 +739,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                                 ))}
                               </select>
                               <select
-                                value={match.team2_id}
+                                value={match.team2_id || ''}
                                 onChange={(e) => updateMatch(match.id, { team2_id: e.target.value })}
                                 className="form-select py-1 text-[11px]"
                               >
@@ -658,7 +768,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                           </td>
                           <td className="px-8 py-6">
                             <select
-                              value={match.status}
+                              value={match.status || 'upcoming'}
                               onChange={(e) => updateMatch(match.id, { status: e.target.value as any })}
                               className={cn(
                                 "form-select w-auto py-2",
@@ -789,7 +899,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                           </td>
                           <td className="px-8 py-6">
                             <select
-                              value={item.status}
+                              value={item.status || 'upcoming'}
                               onChange={(e) => updateSchedule(item.id, { status: e.target.value as any })}
                               className="form-select w-auto py-2"
                             >
@@ -840,15 +950,37 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                 {houses.map((house) => (
                   <div key={house.id} className="card-glass p-8 space-y-6">
                     <div className="flex items-center gap-6">
-                      <div className="relative group">
+                      <div className="relative group cursor-pointer" onClick={() => document.getElementById(`house-logo-${house.id}`)?.click()}>
+                        <input 
+                          type="file"
+                          id={`house-logo-${house.id}`}
+                          className="hidden"
+                          accept="image/*"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file || !supabase) return;
+                            setLoading(true);
+                            try {
+                              const fileName = `house_${house.id}_logo_${Date.now()}`;
+                              const { error: uploadError } = await supabase.storage.from('ucsf-media').upload(fileName, file);
+                              if (uploadError) throw uploadError;
+                              const { data: { publicUrl } } = supabase.storage.from('ucsf-media').getPublicUrl(fileName);
+                              await updateHouse(house.id, { logo_url: publicUrl });
+                            } catch (err: any) {
+                              handleSupabaseError(err, 'Logo upload failed');
+                            } finally {
+                              setLoading(false);
+                            }
+                          }}
+                        />
                         <div className="w-24 h-24 bg-white/5 flex items-center justify-center text-5xl filter drop-shadow-lg border border-border overflow-hidden">
                           {house.logo_url ? (
                             <img src={house.logo_url} alt={house.name} className="w-full h-full object-contain p-4" referrerPolicy="no-referrer" />
                           ) : (
-                            <span className="text-muted text-xs font-ui uppercase tracking-widest">No Logo</span>
+                            <img src={`https://api.dicebear.com/7.x/bottts/svg?seed=${house.name}`} alt={house.name} className="w-full h-full object-contain p-4 opacity-50" referrerPolicy="no-referrer" />
                           )}
                         </div>
-                        <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-maple text-bg flex items-center justify-center rounded-full shadow-lg pointer-events-none">
+                        <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-maple text-bg flex items-center justify-center rounded-full shadow-lg">
                           <Edit2 size={14} />
                         </div>
                       </div>
@@ -924,7 +1056,32 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                     <div className="space-y-2">
                       <label className="font-ui text-[10px] font-bold text-subtle uppercase tracking-widest">Banner URL</label>
                       <div className="flex gap-3">
-                        <div className="w-10 h-10 bg-white/5 border border-border flex items-center justify-center overflow-hidden flex-shrink-0">
+                        <div 
+                          className="w-10 h-10 bg-white/5 border border-border flex items-center justify-center overflow-hidden flex-shrink-0 cursor-pointer"
+                          onClick={() => document.getElementById(`house-banner-${house.id}`)?.click()}
+                        >
+                          <input 
+                            type="file"
+                            id={`house-banner-${house.id}`}
+                            className="hidden"
+                            accept="image/*"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file || !supabase) return;
+                              setLoading(true);
+                              try {
+                                const fileName = `house_${house.id}_banner_${Date.now()}`;
+                                const { error: uploadError } = await supabase.storage.from('ucsf-media').upload(fileName, file);
+                                if (uploadError) throw uploadError;
+                                const { data: { publicUrl } } = supabase.storage.from('ucsf-media').getPublicUrl(fileName);
+                                await updateHouse(house.id, { banner_url: publicUrl });
+                              } catch (err: any) {
+                                handleSupabaseError(err, 'Banner upload failed');
+                              } finally {
+                                setLoading(false);
+                              }
+                            }}
+                          />
                           {house.banner_url ? (
                             <img src={house.banner_url} alt="Banner" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                           ) : (
@@ -1116,7 +1273,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                           try {
                             const fileName = `brochure_${Date.now()}.pdf`;
                             const { data, error: uploadError } = await supabase.storage
-                              .from('brochures')
+                              .from('ucsf-media')
                               .upload(fileName, file, {
                                 cacheControl: '3600',
                                 upsert: true
@@ -1125,14 +1282,13 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                             if (uploadError) throw uploadError;
 
                             const { data: { publicUrl } } = supabase.storage
-                              .from('brochures')
+                              .from('ucsf-media')
                               .getPublicUrl(fileName);
 
                             await updateSetting('brochure_url', publicUrl);
                             alert('Brochure uploaded successfully!');
                           } catch (err: any) {
-                            console.error('Upload error:', err);
-                            setError(`Upload failed: ${err.message}. Make sure the 'brochures' bucket exists in Supabase Storage and is public.`);
+                            handleSupabaseError(err, 'Brochure upload failed');
                           } finally {
                             setLoading(false);
                           }
@@ -1173,6 +1329,44 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                 <div className="flex justify-between items-center mb-8">
                   <h3 className="text-2xl text-text tracking-wide">Media Gallery</h3>
                   <div className="flex gap-4">
+                    <div className="relative">
+                      <input 
+                        type="file"
+                        id="gallery-upload"
+                        className="hidden"
+                        accept="image/*,video/*"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file || !supabase) return;
+                          setLoading(true);
+                          try {
+                            const title = prompt('Enter title for this media:', file.name.split('.')[0]);
+                            if (!title) return;
+                            const yearStr = prompt('Enter year (2025 or 2026):', '2026');
+                            const year = parseInt(yearStr || '2026');
+                            
+                            const fileName = `gallery_${Date.now()}_${file.name}`;
+                            const { error: uploadError } = await supabase.storage.from('ucsf-media').upload(fileName, file);
+                            if (uploadError) throw uploadError;
+                            const { data: { publicUrl } } = supabase.storage.from('ucsf-media').getPublicUrl(fileName);
+                            
+                            const type = file.type.startsWith('video/') ? 'video' : 'image';
+                            await addGalleryItem({ title, type, url: publicUrl, thumbnail_url: null, year });
+                          } catch (err: any) {
+                            handleSupabaseError(err, 'Gallery upload failed');
+                          } finally {
+                            setLoading(false);
+                          }
+                        }}
+                      />
+                      <button 
+                        onClick={() => document.getElementById('gallery-upload')?.click()}
+                        className="btn-primary flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest"
+                      >
+                        <Upload size={16} />
+                        Upload Media
+                      </button>
+                    </div>
                     <button 
                       onClick={() => {
                         const title = prompt('Enter title:');
@@ -1184,20 +1378,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                       className="btn-ghost flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest"
                     >
                       <ImageIcon size={16} />
-                      Add Photo
-                    </button>
-                    <button 
-                      onClick={() => {
-                        const title = prompt('Enter title:');
-                        const url = prompt('Enter video URL (YouTube/Direct):');
-                        const yearStr = prompt('Enter year (2025 or 2026):', '2026');
-                        const year = parseInt(yearStr || '2026');
-                        if (title && url) addGalleryItem({ title, type: 'video', url, thumbnail_url: null, year });
-                      }}
-                      className="btn-ghost flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest"
-                    >
-                      <Video size={16} />
-                      Add Video
+                      Add via URL
                     </button>
                   </div>
                 </div>
@@ -1468,6 +1649,53 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
           )}
         </AnimatePresence>
       </main>
+
+      {/* Confirmation Modal */}
+      <AnimatePresence>
+        {confirmModal.isOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md card-glass p-8 shadow-2xl border-maple/20"
+            >
+              <div className="flex items-center gap-4 mb-6 text-maple">
+                <div className="w-12 h-12 rounded-full bg-maple/10 flex items-center justify-center">
+                  <AlertCircle size={24} />
+                </div>
+                <h3 className="text-xl font-ui font-bold uppercase tracking-widest">{confirmModal.title}</h3>
+              </div>
+              
+              <p className="text-muted mb-8 leading-relaxed">
+                {confirmModal.message}
+              </p>
+              
+              <div className="flex gap-4">
+                <button
+                  onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                  className="flex-1 btn-ghost py-4 font-ui text-xs font-bold uppercase tracking-widest"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmModal.onConfirm}
+                  className="flex-1 bg-maple hover:bg-maple/90 text-white py-4 font-ui text-xs font-bold uppercase tracking-widest transition-all shadow-lg shadow-maple/20"
+                >
+                  Confirm Delete
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   </div>
 </div>
