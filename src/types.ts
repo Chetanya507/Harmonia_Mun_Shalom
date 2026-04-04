@@ -18,6 +18,7 @@ export type Category = {
   sort_order: number;
   gender: string | null;
   eligible_years: string | null;
+  type: 'sport' | 'cultural';
 };
 
 export type MatchStatus = 'upcoming' | 'live' | 'completed';
@@ -79,5 +80,13 @@ export type GalleryItem = {
   url: string;
   thumbnail_url: string | null;
   year?: number; // 2025 or 2026
+  created_at: string;
+};
+
+export type Notice = {
+  id: number;
+  title: string;
+  content: string;
+  priority: 'low' | 'medium' | 'high';
   created_at: string;
 };

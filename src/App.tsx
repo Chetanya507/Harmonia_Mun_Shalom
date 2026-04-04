@@ -5,15 +5,24 @@ import MatchCard from './components/MatchCard';
 import ScheduleCard from './components/ScheduleCard';
 import { useUCSFData } from './hooks/useUCSFData';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trophy, Activity, Calendar, Shield, Loader2, AlertCircle, ChevronRight, Play, Image as ImageIcon, Video, ExternalLink } from 'lucide-react';
+import { Trophy, Activity, Calendar, Shield, Loader2, AlertCircle, ChevronRight, Play, Image as ImageIcon, Video, ExternalLink, Bell, Users, Filter } from 'lucide-react';
 import { cn } from './lib/utils';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [galleryYear, setGalleryYear] = useState<'all' | 2025 | 2026>('all');
-  const { houses, matches, schedule, settings, categories, gallery, loading, error, refresh } = useUCSFData();
+  const [noticePriority, setNoticePriority] = useState<'all' | 'low' | 'medium' | 'high'>('all');
+  const { houses, matches, schedule, settings, categories, gallery, notices, loading, error, refresh } = useUCSFData();
   const liveItems = React.useMemo(() => schedule.filter(s => s.status === 'live'), [schedule]);
   const upcomingItems = React.useMemo(() => schedule.filter(s => s.status === 'upcoming').slice(0, 3), [schedule]);
+
+  const handleTabChange = (tab: string) => {
+    if (tab !== 'matches') {
+      setSelectedCategory(null);
+    }
+    setActiveTab(tab);
+  };
 
   if (loading) {
     return (
@@ -52,7 +61,6 @@ export default function App() {
   const festivalName = settings['festival_name'] || 'UCSF 2026';
   const festivalSubtitle = settings['festival_subtitle'] || 'Union of Culture & Sports Fest';
   const festivalDates = settings['festival_dates'] || 'April 2026 - Shalom Hills';
-  const registrationOpen = settings['registration_open'] !== 'false';
   const announcementText = settings['announcement_text'];
   const footerText = settings['footer_text'];
 
@@ -103,8 +111,8 @@ export default function App() {
                     const el = document.getElementById('scoreboard');
                     el?.scrollIntoView({ behavior: 'smooth' });
                   }} className="btn-primary">Live Standings</button>
-                  <button onClick={() => setActiveTab('matches')} className="btn-ghost">View Fixtures</button>
-                  <button onClick={() => setActiveTab('schedule')} className="btn-ghost">Full Schedule</button>
+                  <button onClick={() => handleTabChange('matches')} className="btn-ghost">View Matches</button>
+                  <button onClick={() => handleTabChange('schedule')} className="btn-ghost">Full Schedule</button>
                 </motion.div>
               </div>
             </section>
@@ -132,6 +140,170 @@ export default function App() {
                 ))}
               </div>
             </div>
+
+            {/* ABOUT */}
+            <section className="py-24 bg-bg-dark">
+              <div className="max-w-7xl mx-auto px-6">
+                <div className="grid md:grid-cols-2 gap-24 items-start">
+                  <div>
+                    <p className="sec-label">The Festival</p>
+                    <h2 className="text-5xl md:text-6xl mb-8">What Is UCSF?</h2>
+                    <p className="text-white/60 mb-6 leading-relaxed">
+                      The <strong className="text-white">Union of Culture & Sports Fest</strong> is the premier inter-school championship hosted by Shalom Hills International School.
+                    </p>
+                    <p className="text-white/60 mb-12 leading-relaxed">
+                      Four legendary houses — Maple, Cedar, Ebony, and Oak — battle across disciplines, each vying for the ultimate crown and the glory of their house.
+                    </p>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      {[
+                        { val: '4', label: 'Houses' },
+                        { val: '5', label: 'Sports' },
+                        { val: '5', label: 'Cultural Events' },
+                        { val: '1', label: 'Champion' },
+                      ].map((stat, i) => (
+                        <div key={i} className="card-glass p-8 text-center">
+                          <div className="font-display text-5xl text-maple leading-none mb-2">{stat.val}</div>
+                          <div className="font-ui text-[10px] font-bold uppercase tracking-widest text-white/40">{stat.label}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="sec-label">Events</p>
+                    <h2 className="text-5xl md:text-6xl mb-8">The Battlegrounds</h2>
+                    <div className="space-y-4">
+                      {schedule.slice(0, 5).map((item) => (
+                        <div key={item.id} className="card-glass p-6 flex items-center justify-between group hover:border-maple/30 transition-all">
+                          <div>
+                            <h4 className="font-display text-xl tracking-wide mb-1">{item.title}</h4>
+                            <p className="font-ui text-[10px] font-bold uppercase tracking-widest text-white/40">{item.venue}</p>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-ui text-xs font-bold text-maple mb-1">{item.time_start}</div>
+                            <div className={cn(
+                              "text-[10px] font-bold uppercase tracking-widest",
+                              item.status === 'live' ? "text-red-500" : "text-white/20"
+                            )}>
+                              {item.status}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <button 
+                      onClick={() => handleTabChange('schedule')}
+                      className="mt-8 font-ui text-xs font-bold uppercase tracking-widest text-maple flex items-center gap-2 hover:gap-4 transition-all"
+                    >
+                      View Full Schedule <ChevronRight size={14} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* SPORTS SECTION */}
+            <section className="py-24 bg-bg2/30 border-y border-border">
+              <div className="max-w-7xl mx-auto px-6">
+                <div className="mb-16">
+                  <p className="sec-label">Athletics</p>
+                  <h2 className="text-5xl md:text-6xl mb-6">Sports Section</h2>
+                  <p className="text-muted max-w-xl">The arena where strength meets strategy. Five major sports, one goal.</p>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+                  {[
+                    { name: 'Cricket', emoji: '🏏', img: 'https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&q=80&w=400' },
+                    { name: 'Football', emoji: '⚽', img: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?auto=format&fit=crop&q=80&w=400' },
+                    { name: 'Basketball', emoji: '🏀', img: 'https://images.unsplash.com/photo-1546519638-68e109498ffc?auto=format&fit=crop&q=80&w=400' },
+                    { name: 'Throwball', emoji: '🏐', img: 'https://images.unsplash.com/photo-1592656094267-764a45160876?auto=format&fit=crop&q=80&w=400' },
+                    { name: 'Chess', emoji: '♟️', img: 'https://images.unsplash.com/photo-1529699211952-734e80c4d42b?auto=format&fit=crop&q=80&w=400' },
+                  ].map((sport, i) => (
+                    <motion.div 
+                      key={i}
+                      whileHover={{ y: -10 }}
+                      className="card-glass overflow-hidden group"
+                    >
+                      <div className="aspect-[4/5] relative">
+                        <img 
+                          src={sport.img} 
+                          alt={sport.name} 
+                          className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-500"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-bg-dark via-transparent to-transparent" />
+                        <div className="absolute inset-0 flex flex-col justify-end p-6">
+                          <div className="text-4xl mb-2">{sport.emoji}</div>
+                          <h4 className="text-2xl font-display uppercase tracking-wider mb-4">{sport.name}</h4>
+                          <button 
+                            onClick={() => {
+                              setSelectedCategory(sport.name);
+                              setActiveTab('matches');
+                            }}
+                            className="w-full py-3 bg-white/10 hover:bg-maple hover:text-bg-dark border border-white/10 hover:border-maple transition-all font-ui text-[10px] font-bold uppercase tracking-widest"
+                          >
+                            View Matches
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            {/* CULTURAL SECTION */}
+            <section className="py-24">
+              <div className="max-w-7xl mx-auto px-6">
+                <div className="mb-16 text-right">
+                  <p className="sec-label">Arts & Expression</p>
+                  <h2 className="text-5xl md:text-6xl mb-6">Cultural Events</h2>
+                  <p className="text-muted max-w-xl ml-auto">Where creativity takes center stage. A showcase of talent and passion.</p>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+                  {[
+                    { name: 'Dance', emoji: '💃', img: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&q=80&w=400' },
+                    { name: 'Music', emoji: '🎵', img: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&q=80&w=400' },
+                    { name: 'Theatre', emoji: '🎭', img: 'https://images.unsplash.com/photo-1507676184212-d03ab07a01bf?auto=format&fit=crop&q=80&w=400' },
+                    { name: 'Graffiti Art', emoji: '🎨', img: 'https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&q=80&w=400' },
+                    { name: 'Cinematography', emoji: '🎬', img: 'https://images.unsplash.com/photo-1485846234645-a62644f84728?auto=format&fit=crop&q=80&w=400' },
+                  ].map((event, i) => (
+                    <motion.div 
+                      key={i}
+                      whileHover={{ scale: 1.02 }}
+                      className="card-glass p-1 group overflow-hidden"
+                    >
+                      <div className="aspect-square relative overflow-hidden rounded-lg mb-4">
+                        <img 
+                          src={event.img} 
+                          alt={event.name} 
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="absolute inset-0 bg-maple/20 mix-blend-overlay opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="absolute inset-0 flex items-center justify-center text-5xl opacity-0 group-hover:opacity-100 transition-all transform translate-y-4 group-hover:translate-y-0">
+                          {event.emoji}
+                        </div>
+                      </div>
+                      <div className="p-4 pt-0">
+                        <h4 className="text-xl font-display uppercase tracking-widest mb-4">{event.name}</h4>
+                        <button 
+                          onClick={() => {
+                            setSelectedCategory(event.name);
+                            setActiveTab('matches');
+                          }}
+                          className="w-full py-2 bg-white/5 hover:bg-white/10 border border-white/10 transition-all font-ui text-[9px] font-bold uppercase tracking-widest text-muted hover:text-text"
+                        >
+                          View Matches
+                        </button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+            </section>
 
             {/* HOUSES */}
             <section className="py-32">
@@ -212,68 +384,6 @@ export default function App() {
                 </div>
               </div>
             </section>
-
-            {/* ABOUT */}
-            <section className="py-24 bg-bg-dark">
-              <div className="max-w-7xl mx-auto px-6">
-                <div className="grid md:grid-cols-2 gap-24 items-start">
-                  <div>
-                    <p className="sec-label">The Festival</p>
-                    <h2 className="text-5xl md:text-6xl mb-8">What Is UCSF?</h2>
-                    <p className="text-white/60 mb-6 leading-relaxed">
-                      The <strong className="text-white">Union of Culture & Sports Fest</strong> is the premier inter-school championship hosted by Shalom Hills International School.
-                    </p>
-                    <p className="text-white/60 mb-12 leading-relaxed">
-                      Four legendary houses — Maple, Cedar, Ebony, and Oak — battle across disciplines, each vying for the ultimate crown and the glory of their house.
-                    </p>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      {[
-                        { val: '4', label: 'Houses' },
-                        { val: '3', label: 'Sports' },
-                        { val: '6', label: 'Matches' },
-                        { val: '1', label: 'Champion' },
-                      ].map((stat, i) => (
-                        <div key={i} className="card-glass p-8 text-center">
-                          <div className="font-display text-5xl text-maple leading-none mb-2">{stat.val}</div>
-                          <div className="font-ui text-[10px] font-bold uppercase tracking-widest text-white/40">{stat.label}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="sec-label">Events</p>
-                    <h2 className="text-5xl md:text-6xl mb-8">The Battlegrounds</h2>
-                    <div className="space-y-4">
-                      {schedule.slice(0, 5).map((item) => (
-                        <div key={item.id} className="card-glass p-6 flex items-center justify-between group hover:border-maple/30 transition-all">
-                          <div>
-                            <h4 className="font-display text-xl tracking-wide mb-1">{item.title}</h4>
-                            <p className="font-ui text-[10px] font-bold uppercase tracking-widest text-white/40">{item.venue}</p>
-                          </div>
-                          <div className="text-right">
-                            <div className="font-ui text-xs font-bold text-maple mb-1">{item.time_start}</div>
-                            <div className={cn(
-                              "text-[10px] font-bold uppercase tracking-widest",
-                              item.status === 'live' ? "text-red-500" : "text-white/20"
-                            )}>
-                              {item.status}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <button 
-                      onClick={() => setActiveTab('schedule')}
-                      className="mt-8 font-ui text-xs font-bold uppercase tracking-widest text-maple flex items-center gap-2 hover:gap-4 transition-all"
-                    >
-                      View Full Schedule <ChevronRight size={14} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </section>
           </div>
         );
 
@@ -284,7 +394,7 @@ export default function App() {
             <div className="mb-20">
               <p className="sec-label">Event Schedule</p>
               <h2 className="text-6xl md:text-8xl">The Timeline</h2>
-              <p className="text-muted mt-4 text-lg">Full Two-Day Programme — UCSF 2026</p>
+              <p className="text-muted mt-4 text-lg">Full Three-Day Programme — UCSF 2026</p>
             </div>
             
             <div className="space-y-32">
@@ -313,16 +423,32 @@ export default function App() {
         );
 
       case 'matches':
+        const filteredCategories = selectedCategory 
+          ? categories.filter(c => c.name.toLowerCase() === selectedCategory.toLowerCase())
+          : categories;
+
         return (
           <div className="max-w-7xl mx-auto px-6 py-24">
-            <div className="mb-16">
-              <p className="sec-label">Fixtures & Results</p>
-              <h2 className="text-6xl md:text-7xl">Match Schedule</h2>
-              <p className="text-white/40 mt-4">Browse results by sport. Real-time updates enabled.</p>
+            <div className="mb-16 flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
+              <div>
+                <p className="sec-label">Matches & Results</p>
+                <h2 className="text-6xl md:text-7xl">Match Schedule</h2>
+                <p className="text-white/40 mt-4">Browse results by sport. Real-time updates enabled.</p>
+              </div>
+              
+              {selectedCategory && (
+                <button 
+                  onClick={() => setSelectedCategory(null)}
+                  className="flex items-center gap-2 px-4 py-2 bg-white/5 border border-border rounded-lg text-maple font-ui text-[10px] font-bold uppercase tracking-widest hover:bg-white/10 transition-all"
+                >
+                  <Filter size={14} />
+                  Clear Filter: {selectedCategory}
+                </button>
+              )}
             </div>
 
             <div className="space-y-24">
-              {categories.map(cat => {
+              {filteredCategories.map(cat => {
                 const catMatches = matches.filter(m => m.category_id === cat.id);
                 if (catMatches.length === 0) return null;
                 return (
@@ -338,6 +464,13 @@ export default function App() {
                   </section>
                 );
               })}
+              
+              {filteredCategories.length === 0 || (selectedCategory && filteredCategories.every(cat => matches.filter(m => m.category_id === cat.id).length === 0)) ? (
+                <div className="py-40 text-center card-glass">
+                  <Activity size={48} className="mx-auto text-muted mb-4" />
+                  <p className="font-ui text-sm font-bold text-muted uppercase tracking-widest">No matches found for {selectedCategory || 'this category'}.</p>
+                </div>
+              ) : null}
             </div>
           </div>
         );
@@ -354,6 +487,105 @@ export default function App() {
               {houses.map((house) => (
                 <HouseCard key={house.id} house={house} isTop={house.rank_pos === 1} />
               ))}
+            </div>
+          </div>
+        );
+
+      case 'notices':
+        const filteredNotices = notices.filter(n => noticePriority === 'all' || n.priority === noticePriority);
+        return (
+          <div className="max-w-7xl mx-auto px-6 py-24">
+            <div className="mb-16 flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
+              <div>
+                <p className="sec-label">Announcements</p>
+                <h2 className="text-6xl md:text-7xl">Official Notices</h2>
+                <p className="text-white/40 mt-4">Stay updated with the latest fest news and alerts.</p>
+              </div>
+              
+              <div className="flex items-center gap-2 bg-white/5 p-1 border border-border rounded-lg">
+                {['all', 'high', 'medium', 'low'].map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setNoticePriority(p as any)}
+                    className={cn(
+                      "px-6 py-2 font-ui text-[11px] font-bold uppercase tracking-widest transition-all rounded-md",
+                      noticePriority === p ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
+                    )}
+                  >
+                    {p === 'all' ? 'All' : p}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <AnimatePresence mode="popLayout">
+                {filteredNotices.map((notice) => (
+                  <motion.div 
+                    key={notice.id}
+                    layout
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="card-glass p-8 group hover:border-maple/30 transition-all"
+                  >
+                    <div className="flex items-center gap-3 mb-4">
+                      <span className={cn(
+                        "px-3 py-1 rounded text-[10px] font-bold uppercase tracking-widest",
+                        notice.priority === 'high' ? "bg-danger/20 text-danger" :
+                        notice.priority === 'medium' ? "bg-maple/20 text-maple" :
+                        "bg-white/5 text-muted"
+                      )}>
+                        {notice.priority} priority
+                      </span>
+                      <span className="font-ui text-[10px] font-bold text-muted uppercase tracking-widest">
+                        {new Date(notice.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                      </span>
+                    </div>
+                    <h3 className="text-3xl font-display tracking-wide uppercase mb-4">{notice.title}</h3>
+                    <p className="text-muted text-lg leading-relaxed">{notice.content}</p>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+              
+              {filteredNotices.length === 0 && (
+                <motion.div 
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="col-span-full py-40 text-center card-glass"
+                >
+                  <Bell size={48} className="mx-auto text-muted mb-4" />
+                  <p className="font-ui text-sm font-bold text-muted uppercase tracking-widest">No notices found for this category.</p>
+                </motion.div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'selected-students':
+        const spreadsheetUrl = settings['master_spreadsheet_url'];
+        return (
+          <div className="max-w-7xl mx-auto px-6 py-24 h-[calc(100vh-62px)] flex flex-col">
+            <div className="mb-16">
+              <p className="sec-label">Participants</p>
+              <h2 className="text-6xl md:text-7xl">Selected Students</h2>
+              <p className="text-white/40 mt-4">View the master list of students selected for various events.</p>
+            </div>
+            
+            <div className="flex-grow card-glass overflow-hidden relative group">
+              {spreadsheetUrl ? (
+                <iframe 
+                  src={spreadsheetUrl}
+                  className="w-full h-full border-0 bg-white"
+                  title="Master Spreadsheet"
+                />
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center">
+                  <Users size={64} className="text-muted mb-6" />
+                  <h3 className="text-2xl font-display uppercase tracking-widest mb-4">Spreadsheet Not Linked</h3>
+                  <p className="text-muted max-w-md">The master spreadsheet has not been linked by the administrator yet. Please check back later.</p>
+                </div>
+              )}
             </div>
           </div>
         );
@@ -383,53 +615,6 @@ export default function App() {
                 </a>
               </div>
             </div>
-          </div>
-        );
-
-      case 'register':
-        const googleForms = [
-          { title: 'Sports Registration', url: settings['google_form_sports'] || 'https://forms.google.com' },
-          { title: 'Cultural Registration', url: settings['google_form_cultural'] || 'https://forms.google.com' },
-        ];
-
-        return (
-          <div className="max-w-4xl mx-auto px-6 py-24">
-            <div className="mb-16">
-              <p className="sec-label">Join the Battle</p>
-              <h2 className="text-6xl md:text-7xl">Register</h2>
-              <p className="text-white/40 mt-4">
-                {registrationOpen 
-                  ? "Sign up for your favorite events via the official Google Forms below."
-                  : "Registrations are currently closed. Please check back later."}
-              </p>
-            </div>
-            {registrationOpen ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {googleForms.map((form, i) => (
-                  <motion.a
-                    key={i}
-                    href={form.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    whileHover={{ y: -5, scale: 1.02 }}
-                    className="card-glass p-8 flex flex-col items-start gap-4 group hover:border-maple/40 transition-all"
-                  >
-                    <div className="w-12 h-12 bg-maple/10 text-maple rounded-xl flex items-center justify-center border border-maple/20 group-hover:bg-maple group-hover:text-bg transition-colors">
-                      <ExternalLink size={24} />
-                    </div>
-                    <div>
-                      <h3 className="text-2xl font-display tracking-wider mb-2">{form.title}</h3>
-                      <p className="font-ui text-[10px] font-bold uppercase tracking-widest text-muted">Open in Google Forms</p>
-                    </div>
-                  </motion.a>
-                ))}
-              </div>
-            ) : (
-              <div className="card-glass p-12 text-center">
-                <AlertCircle size={48} className="mx-auto text-muted mb-6" />
-                <p className="font-ui text-sm font-bold text-muted uppercase tracking-widest">Registrations are closed</p>
-              </div>
-            )}
           </div>
         );
 
@@ -530,7 +715,7 @@ export default function App() {
   return (
     <Layout 
       activeTab={activeTab} 
-      setActiveTab={setActiveTab}
+      setActiveTab={handleTabChange}
       title={festivalName}
       subtitle={festivalSubtitle}
       announcement={announcementText}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Bell, Users } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface LayoutProps {
@@ -21,7 +21,8 @@ export default function Layout({ children, activeTab, setActiveTab, title, subti
     { id: 'houses', label: 'Houses', href: '#houses' },
     { id: 'matches', label: 'Matches', href: '#matches' },
     { id: 'schedule', label: 'Schedule', href: '#schedule' },
-    { id: 'register', label: 'Register', href: '#register' },
+    { id: 'notices', label: 'Notices', href: '#notices' },
+    { id: 'selected-students', label: 'Selected Students', href: '#selected-students' },
     { id: 'gallery', label: 'Gallery', href: '#gallery' },
     { id: 'brochure', label: 'Brochure', href: '#brochure' },
   ];

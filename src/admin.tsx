@@ -5,7 +5,7 @@ import './index.css';
 import { useUCSFData } from './hooks/useUCSFData';
 
 const AdminWrapper = () => {
-  const { houses, matches, schedule, settings, categories, gallery, refresh, loading, isRefreshing } = useUCSFData();
+  const { houses, matches, schedule, settings, categories, notices, refresh, loading, isRefreshing } = useUCSFData();
 
   if (loading) {
     return (
@@ -29,7 +29,7 @@ const AdminWrapper = () => {
         houses={houses} 
         schedule={schedule}
         categories={categories}
-        gallery={gallery}
+        notices={notices}
         settings={settings}
         refresh={refresh} 
       />

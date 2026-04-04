@@ -63,15 +63,15 @@
 
 @layer components {
   .btn-primary {
-    @apply inline-flex items-center gap-[7px] px-[26px] py-[11px] bg-maple text-bg font-ui text-[12px] font-bold uppercase tracking-[2px] transition-all hover:bg-[#ffd84d] active:scale-95 cursor-pointer;
+    @apply inline-flex items-center gap-[7px] px-[26px] py-[11px] bg-maple text-bg font-ui text-[12px] font-bold uppercase tracking-[2px] transition-all hover:bg-[#ffd84d] active:scale-95 cursor-pointer rounded-xl;
   }
   
   .btn-ghost {
-    @apply inline-flex items-center gap-[7px] px-[26px] py-[11px] border border-border bg-transparent text-text font-ui text-[12px] font-bold uppercase tracking-[2px] transition-all hover:border-white/30 hover:bg-white/5 active:scale-95 cursor-pointer;
+    @apply inline-flex items-center gap-[7px] px-[26px] py-[11px] border border-border bg-transparent text-text font-ui text-[12px] font-bold uppercase tracking-[2px] transition-all hover:border-white/30 hover:bg-white/5 active:scale-95 cursor-pointer rounded-xl;
   }
 
   .btn-danger {
-    @apply inline-flex items-center gap-[7px] px-[26px] py-[11px] border border-danger bg-transparent text-danger font-ui text-[12px] font-bold uppercase tracking-[2px] transition-all hover:bg-danger/10 active:scale-95 cursor-pointer;
+    @apply inline-flex items-center gap-[7px] px-[26px] py-[11px] border border-danger bg-transparent text-danger font-ui text-[12px] font-bold uppercase tracking-[2px] transition-all hover:bg-danger/10 active:scale-95 cursor-pointer rounded-xl;
   }
 
   .sec-label {
@@ -83,24 +83,24 @@
   }
 
   .card-glass {
-    @apply bg-surface border border-border backdrop-blur-sm relative;
+    @apply bg-surface border border-border backdrop-blur-sm relative rounded-3xl;
   }
 
   .badge {
-    @apply inline-block px-[10px] py-[4px] font-ui text-[10px] font-bold uppercase tracking-[2px];
+    @apply inline-block px-[10px] py-[4px] font-ui text-[10px] font-bold uppercase tracking-[2px] rounded-lg;
   }
   .badge-upcoming { @apply bg-white/10 text-muted; }
   .badge-live { @apply bg-danger/20 text-danger; }
   .badge-completed { @apply bg-oak/15 text-oak; }
 
   .form-input, .form-select {
-    @apply w-full px-[13px] py-[10px] bg-bg2 border border-border text-text font-sans text-[14px] outline-none transition-all focus:border-accent focus:ring-3 focus:ring-accent/15;
+    @apply w-full px-[13px] py-[10px] bg-bg2 border border-border text-text font-sans text-[14px] outline-none transition-all focus:border-accent focus:ring-3 focus:ring-accent/15 rounded-xl;
   }
   .form-input::placeholder { @apply text-subtle; }
   .form-select option { @apply bg-bg3; }
 
   .hero-eyebrow {
-    @apply inline-block font-ui text-[11px] font-bold tracking-[3px] uppercase text-maple border border-maple/30 bg-maple/10 px-[20px] py-[6px] mb-[20px];
+    @apply inline-block font-ui text-[11px] font-bold tracking-[3px] uppercase text-maple border border-maple/30 bg-maple/10 px-[20px] py-[6px] mb-[20px] rounded-full;
   }
   .hero-title {
     @apply font-display text-[clamp(60px,9vw,120px)] leading-[0.95] tracking-[3px] bg-gradient-to-b from-white to-white/65 bg-clip-text text-transparent;

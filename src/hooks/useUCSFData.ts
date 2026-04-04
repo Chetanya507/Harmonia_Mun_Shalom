@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { House, Match, ScheduleItem, Setting, Category, GalleryItem } from '../types';
+import { House, Match, ScheduleItem, Setting, Category, GalleryItem, Notice } from '../types';
 
 export function useUCSFData() {
   const [houses, setHouses] = useState<House[]>([]);
@@ -9,6 +9,7 @@ export function useUCSFData() {
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [categories, setCategories] = useState<Category[]>([]);
   const [gallery, setGallery] = useState<GalleryItem[]>([]);
+  const [notices, setNotices] = useState<Notice[]>([]);
   const [loading, setLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,6 +50,11 @@ export function useUCSFData() {
     if (data) setGallery(data);
   };
 
+  const fetchNotices = async () => {
+    const { data } = await supabase!.from('notices').select('*').order('created_at', { ascending: false });
+    if (data) setNotices(data);
+  };
+
   const fetchData = async (isInitial = false) => {
     if (!supabase) {
       setError('Supabase credentials missing. Please add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to your environment variables in the Secrets panel.');
@@ -68,7 +74,8 @@ export function useUCSFData() {
         fetchSchedule().catch(e => { console.error('Schedule fetch failed:', e); throw e; }),
         fetchSettings().catch(e => { console.error('Settings fetch failed:', e); throw e; }),
         fetchCategories().catch(e => { console.error('Categories fetch failed:', e); throw e; }),
-        fetchGallery().catch(e => { console.error('Gallery fetch failed:', e); throw e; })
+        fetchGallery().catch(e => { console.error('Gallery fetch failed:', e); throw e; }),
+        fetchNotices().catch(e => { console.error('Notices fetch failed:', e); throw e; })
       ]);
       console.log('Data fetch successful');
     } catch (err: any) {
@@ -110,6 +117,10 @@ export function useUCSFData() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'gallery' }, fetchGallery)
       .subscribe();
 
+    const noticesSub = supabase.channel('notices-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notices' }, fetchNotices)
+      .subscribe();
+
     return () => {
       if (supabase) {
         supabase.removeChannel(housesSub);
@@ -118,11 +129,12 @@ export function useUCSFData() {
         supabase.removeChannel(settingsSub);
         supabase.removeChannel(categoriesSub);
         supabase.removeChannel(gallerySub);
+        supabase.removeChannel(noticesSub);
       }
     };
   }, []);
 
   const refresh = React.useCallback(() => fetchData(false), []);
 
-  return { houses, matches, schedule, settings, categories, gallery, loading, isRefreshing, error, refresh };
+  return { houses, matches, schedule, settings, categories, gallery, notices, loading, isRefreshing, error, refresh };
 }
