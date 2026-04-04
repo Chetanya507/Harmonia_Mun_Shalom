@@ -390,7 +390,6 @@ export default function App() {
         const googleForms = [
           { title: 'Sports Registration', url: settings['google_form_sports'] || 'https://forms.google.com' },
           { title: 'Cultural Registration', url: settings['google_form_cultural'] || 'https://forms.google.com' },
-          { title: 'Volunteer Signup', url: settings['google_form_volunteer'] || 'https://forms.google.com' },
         ];
 
         return (

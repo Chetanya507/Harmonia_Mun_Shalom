@@ -1,23 +1,11 @@
 import React from 'react';
-import ReactDOM from 'react-dom/client';
+import { createRoot } from 'react-dom/client';
 import AdminPanel from './components/AdminPanel';
 import './index.css';
-
-// Standalone Admin Page
-const AdminPage = () => {
-  return (
-    <div className="min-h-screen py-8 md:py-12 px-4 selection:bg-maple selection:text-bg">
-      <div className="max-w-[1600px] mx-auto">
-        <AdminWrapper />
-      </div>
-    </div>
-  );
-};
-
 import { useUCSFData } from './hooks/useUCSFData';
 
 const AdminWrapper = () => {
-  const { houses, matches, schedule, settings, categories, gallery, refresh, loading, isRefreshing, error } = useUCSFData();
+  const { houses, matches, schedule, settings, categories, gallery, refresh, loading, isRefreshing } = useUCSFData();
 
   if (loading) {
     return (
@@ -49,8 +37,22 @@ const AdminWrapper = () => {
   );
 };
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <AdminPage />
-  </React.StrictMode>
-);
+// Standalone Admin Page
+const AdminPage = () => {
+  return (
+    <div className="min-h-screen py-8 md:py-12 px-4 selection:bg-maple selection:text-bg">
+      <div className="max-w-[1600px] mx-auto">
+        <AdminWrapper />
+      </div>
+    </div>
+  );
+};
+
+const rootElement = document.getElementById('root');
+if (rootElement) {
+  createRoot(rootElement).render(
+    <React.StrictMode>
+      <AdminPage />
+    </React.StrictMode>
+  );
+}

@@ -131,7 +131,6 @@ export default function Layout({ children, activeTab, setActiveTab, title, subti
 
           <div className="flex flex-col md:flex-row justify-between w-full gap-4 font-sans text-[12px] text-subtle">
             <span>© 2026 Shalom Hills International School</span>
-            <span>Built by <a href="#" className="text-maple hover:underline">Ean Kotadia</a> — Class 10E | UCSF Project</span>
           </div>
         </div>
       </footer>

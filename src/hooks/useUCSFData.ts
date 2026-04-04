@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { House, Match, ScheduleItem, Setting, Category, GalleryItem } from '../types';
 
@@ -122,5 +122,7 @@ export function useUCSFData() {
     };
   }, []);
 
-  return { houses, matches, schedule, settings, categories, gallery, loading, isRefreshing, error, refresh: () => fetchData(false) };
+  const refresh = React.useCallback(() => fetchData(false), []);
+
+  return { houses, matches, schedule, settings, categories, gallery, loading, isRefreshing, error, refresh };
 }

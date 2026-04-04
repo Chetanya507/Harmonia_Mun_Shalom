@@ -53,7 +53,52 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
+  const [localSettings, setLocalSettings] = useState<Record<string, string>>({});
+  const [hasChanges, setHasChanges] = useState(false);
+
+  // Sync local settings when settings prop changes
+  React.useEffect(() => {
+    setLocalSettings(settings);
+    setHasChanges(false);
+  }, [settings]);
+
+  const handleSettingChange = (key: string, val: string) => {
+    setLocalSettings(prev => ({ ...prev, [key]: val }));
+    setHasChanges(true);
+  };
+
+  const saveAllSettings = async () => {
+    if (!supabase || !(await checkSession())) return;
+    
+    setConfirmModal({
+      isOpen: true,
+      title: 'Confirm Changes',
+      message: 'Are you sure you want to save all configuration changes? This will update the live site immediately.',
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          const updates = Object.entries(localSettings).map(([key, val]) => ({
+            key_name: key,
+            val: val
+          }));
+          
+          const { error } = await supabase.from('settings').upsert(updates, { onConflict: 'key_name' });
+          if (error) throw error;
+          
+          setSuccess('All settings saved successfully!');
+          setTimeout(() => setSuccess(null), 3000);
+          refresh();
+        } catch (err: any) {
+          handleSupabaseError(err, 'Failed to save settings');
+        } finally {
+          setLoading(false);
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    });
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [confirmModal, setConfirmModal] = useState<{
@@ -67,6 +112,8 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
     message: '',
     onConfirm: () => {}
   });
+  const [galleryModal, setGalleryModal] = useState<{ isOpen: boolean; file?: File; isUrl?: boolean } | null>(null);
+  const [galleryFormData, setGalleryFormData] = useState({ title: '', year: 2026, url: '' });
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -324,9 +371,11 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
   const updateSetting = async (key: string, val: string) => {
     if (!supabase || !(await checkSession())) return;
     setLoading(true);
-    const { error } = await supabase.from('settings').update({ val }).eq('key_name', key);
+    const { error } = await supabase.from('settings').upsert({ key_name: key, val }, { onConflict: 'key_name' });
     if (error) handleSupabaseError(error, 'Failed to update setting');
     else {
+      setSuccess('Setting updated successfully!');
+      setTimeout(() => setSuccess(null), 3000);
       refresh();
       setLoading(false);
     }
@@ -399,6 +448,41 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
     topHouse: houses[0]?.name || 'N/A',
     totalPoints: houses.reduce((acc, h) => acc + h.points, 0)
   }), [matches, houses]);
+
+  const handleGallerySubmit = async () => {
+    if (!supabase || !galleryModal) return;
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      let finalUrl = galleryFormData.url;
+      let type: 'image' | 'video' = 'image';
+
+      if (galleryModal.file) {
+        const fileName = `gallery_${Date.now()}_${galleryModal.file.name}`;
+        const { error: uploadError } = await supabase.storage.from('ucsf-media').upload(fileName, galleryModal.file);
+        if (uploadError) throw uploadError;
+        const { data: { publicUrl } } = supabase.storage.from('ucsf-media').getPublicUrl(fileName);
+        finalUrl = publicUrl;
+        type = galleryModal.file.type.startsWith('video/') ? 'video' : 'image';
+      }
+
+      await addGalleryItem({ 
+        title: galleryFormData.title, 
+        type, 
+        url: finalUrl, 
+        thumbnail_url: null, 
+        year: galleryFormData.year 
+      });
+      setGalleryModal(null);
+      setSuccess('Media added successfully!');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (err: any) {
+      handleSupabaseError(err, 'Gallery operation failed');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!session) {
     return (
@@ -484,7 +568,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                 </div>
               </div>
 
-              <nav className="space-y-2">
+              <nav className="space-y-1">
                 {[
                   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
                   { id: 'matches', label: 'Matches', icon: Activity },
@@ -499,18 +583,41 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                     key={item.id}
                     onClick={() => setActiveTab(item.id as AdminTab)}
                     className={cn(
-                      "w-full flex items-center gap-3 px-4 py-3 font-ui text-[10px] font-bold uppercase tracking-widest transition-all",
+                      "w-full flex items-center justify-between px-4 py-3 font-ui text-[11px] font-bold uppercase tracking-widest transition-all group rounded-lg",
                       activeTab === item.id 
-                        ? "bg-maple text-bg shadow-[0_0_20px_rgba(245,197,24,0.2)]" 
+                        ? "bg-maple text-bg shadow-[0_0_20px_rgba(245,197,24,0.15)]" 
                         : "text-muted hover:text-text hover:bg-white/5"
                     )}
                   >
-                    <item.icon size={16} />
-                    {item.label}
-                    {activeTab === item.id && <ChevronRight size={14} className="ml-auto" />}
+                    <div className="flex items-center gap-4">
+                      <item.icon size={18} className={cn(
+                        "transition-transform group-hover:scale-110",
+                        activeTab === item.id ? "text-bg" : "text-muted group-hover:text-maple"
+                      )} />
+                      {item.label}
+                    </div>
+                    {item.id === 'settings' && hasChanges && (
+                      <div className="w-2 h-2 rounded-full bg-danger animate-pulse shadow-[0_0_10px_rgba(230,57,70,0.5)]" />
+                    )}
                   </button>
                 ))}
               </nav>
+
+              {hasChanges && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="mt-8 p-4 bg-danger/10 border border-danger/20 rounded-xl"
+                >
+                  <p className="font-ui text-[9px] font-bold text-danger uppercase tracking-widest mb-3 text-center">Unsaved Changes</p>
+                  <button 
+                    onClick={saveAllSettings}
+                    className="w-full py-3 bg-danger text-white font-ui text-[10px] font-bold uppercase tracking-widest hover:bg-danger/90 transition-all shadow-lg shadow-danger/20"
+                  >
+                    Save Now
+                  </button>
+                </motion.div>
+              )}
 
               <div className="mt-12 pt-8 border-t border-border">
                 <div className="flex items-center gap-3 mb-6">
@@ -569,6 +676,23 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
               </motion.div>
             )}
 
+            {success && (
+              <motion.div 
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="card-glass p-4 border-success/30 bg-success/5 flex items-center gap-4 text-success"
+              >
+                <Shield size={20} />
+                <div className="flex-1">
+                  <p className="font-ui text-[10px] font-bold uppercase tracking-widest">Success</p>
+                  <p className="text-xs opacity-80">{success}</p>
+                </div>
+                <button onClick={() => setSuccess(null)} className="p-2 hover:bg-success/10 rounded-full transition-colors">
+                  <X size={16} />
+                </button>
+              </motion.div>
+            )}
+
             <AnimatePresence mode="wait">
               {activeTab === 'dashboard' && (
                 <motion.div
@@ -606,18 +730,42 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <button 
                           onClick={() => supabase?.rpc('recompute_points').then(() => refresh())}
-                          className="flex flex-col items-center justify-center p-6 bg-bg2 border border-border hover:border-maple/30 hover:bg-white/5 transition-all gap-3 group"
+                          className="flex flex-col items-center justify-center p-6 bg-bg2/50 border border-border hover:border-maple/30 hover:bg-maple/5 transition-all gap-3 group rounded-xl"
                         >
                           <RefreshCw size={24} className="text-maple group-hover:rotate-180 transition-transform duration-500" />
                           <span className="font-ui text-[10px] font-bold text-text uppercase tracking-widest">Recompute Points</span>
                         </button>
                         <button 
                           onClick={() => setActiveTab('matches')}
-                          className="flex flex-col items-center justify-center p-6 bg-bg2 border border-border hover:border-danger/30 hover:bg-white/5 transition-all gap-3 group"
+                          className="flex flex-col items-center justify-center p-6 bg-bg2/50 border border-border hover:border-danger/30 hover:bg-danger/5 transition-all gap-3 group rounded-xl"
                         >
                           <Activity size={24} className="text-danger group-hover:scale-110 transition-transform" />
                           <span className="font-ui text-[10px] font-bold text-text uppercase tracking-widest">Manage Live</span>
                         </button>
+                        
+                        {settings['google_form_sports'] && (
+                          <a 
+                            href={settings['google_form_sports']}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex flex-col items-center justify-center p-6 bg-bg2/50 border border-border hover:border-accent/30 hover:bg-accent/5 transition-all gap-3 group rounded-xl"
+                          >
+                            <Trophy size={24} className="text-accent group-hover:scale-110 transition-transform" />
+                            <span className="font-ui text-[10px] font-bold text-text uppercase tracking-widest">Sports Form</span>
+                          </a>
+                        )}
+                        
+                        {settings['google_form_cultural'] && (
+                          <a 
+                            href={settings['google_form_cultural']}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex flex-col items-center justify-center p-6 bg-bg2/50 border border-border hover:border-oak/30 hover:bg-oak/5 transition-all gap-3 group rounded-xl"
+                          >
+                            <Users size={24} className="text-oak group-hover:scale-110 transition-transform" />
+                            <span className="font-ui text-[10px] font-bold text-text uppercase tracking-widest">Cultural Form</span>
+                          </a>
+                        )}
                       </div>
                     </div>
 
@@ -1269,6 +1417,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                           
                           setLoading(true);
                           setError(null);
+                          setSuccess(null);
                           
                           try {
                             const fileName = `brochure_${Date.now()}.pdf`;
@@ -1286,7 +1435,8 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                               .getPublicUrl(fileName);
 
                             await updateSetting('brochure_url', publicUrl);
-                            alert('Brochure uploaded successfully!');
+                            setSuccess('Brochure uploaded successfully!');
+                            setTimeout(() => setSuccess(null), 3000);
                           } catch (err: any) {
                             handleSupabaseError(err, 'Brochure upload failed');
                           } finally {
@@ -1338,25 +1488,8 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (!file || !supabase) return;
-                          setLoading(true);
-                          try {
-                            const title = prompt('Enter title for this media:', file.name.split('.')[0]);
-                            if (!title) return;
-                            const yearStr = prompt('Enter year (2025 or 2026):', '2026');
-                            const year = parseInt(yearStr || '2026');
-                            
-                            const fileName = `gallery_${Date.now()}_${file.name}`;
-                            const { error: uploadError } = await supabase.storage.from('ucsf-media').upload(fileName, file);
-                            if (uploadError) throw uploadError;
-                            const { data: { publicUrl } } = supabase.storage.from('ucsf-media').getPublicUrl(fileName);
-                            
-                            const type = file.type.startsWith('video/') ? 'video' : 'image';
-                            await addGalleryItem({ title, type, url: publicUrl, thumbnail_url: null, year });
-                          } catch (err: any) {
-                            handleSupabaseError(err, 'Gallery upload failed');
-                          } finally {
-                            setLoading(false);
-                          }
+                          setGalleryModal({ isOpen: true, file });
+                          setGalleryFormData({ title: file.name.split('.')[0], year: 2026, url: '' });
                         }}
                       />
                       <button 
@@ -1369,11 +1502,8 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                     </div>
                     <button 
                       onClick={() => {
-                        const title = prompt('Enter title:');
-                        const url = prompt('Enter image URL:');
-                        const yearStr = prompt('Enter year (2025 or 2026):', '2026');
-                        const year = parseInt(yearStr || '2026');
-                        if (title && url) addGalleryItem({ title, type: 'image', url, thumbnail_url: null, year });
+                        setGalleryModal({ isOpen: true, isUrl: true });
+                        setGalleryFormData({ title: '', year: 2026, url: '' });
                       }}
                       className="btn-ghost flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest"
                     >
@@ -1453,62 +1583,42 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                     
                     <div className="form-group">
                       <label className="form-label">Festival Name</label>
-                      <div className="flex gap-4">
-                        <input
-                          type="text"
-                          defaultValue={settings['festival_name'] || 'UCSF 2026'}
-                          className="form-input"
-                          onBlur={(e) => updateSetting('festival_name', e.target.value)}
-                        />
-                        <button className="btn-ghost px-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest">
-                          <Save size={14} />
-                        </button>
-                      </div>
+                      <input
+                        type="text"
+                        value={localSettings['festival_name'] || ''}
+                        className="form-input"
+                        onChange={(e) => handleSettingChange('festival_name', e.target.value)}
+                      />
                     </div>
 
                     <div className="form-group">
                       <label className="form-label">Festival Dates</label>
-                      <div className="flex gap-4">
-                        <input
-                          type="text"
-                          defaultValue={settings['festival_dates'] || 'April 15-20, 2026'}
-                          className="form-input"
-                          onBlur={(e) => updateSetting('festival_dates', e.target.value)}
-                        />
-                        <button className="btn-ghost px-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest">
-                          <Save size={14} />
-                        </button>
-                      </div>
+                      <input
+                        type="text"
+                        value={localSettings['festival_dates'] || ''}
+                        className="form-input"
+                        onChange={(e) => handleSettingChange('festival_dates', e.target.value)}
+                      />
                     </div>
 
                     <div className="form-group">
                       <label className="form-label">Festival Subtitle</label>
-                      <div className="flex gap-4">
-                        <input
-                          type="text"
-                          defaultValue={settings['festival_subtitle'] || 'Union of Culture & Sports Fest'}
-                          className="form-input"
-                          onBlur={(e) => updateSetting('festival_subtitle', e.target.value)}
-                        />
-                        <button className="btn-ghost px-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest">
-                          <Save size={14} />
-                        </button>
-                      </div>
+                      <input
+                        type="text"
+                        value={localSettings['festival_subtitle'] || ''}
+                        className="form-input"
+                        onChange={(e) => handleSettingChange('festival_subtitle', e.target.value)}
+                      />
                     </div>
 
                     <div className="form-group">
                       <label className="form-label">Contact Email</label>
-                      <div className="flex gap-4">
-                        <input
-                          type="email"
-                          defaultValue={settings['contact_email'] || 'info@ucsf2026.com'}
-                          className="form-input"
-                          onBlur={(e) => updateSetting('contact_email', e.target.value)}
-                        />
-                        <button className="btn-ghost px-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest">
-                          <Save size={14} />
-                        </button>
-                      </div>
+                      <input
+                        type="email"
+                        value={localSettings['contact_email'] || ''}
+                        className="form-input"
+                        onChange={(e) => handleSettingChange('contact_email', e.target.value)}
+                      />
                     </div>
                   </div>
 
@@ -1520,8 +1630,8 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                       <label className="form-label">Registration Status</label>
                       <select
                         className="form-input"
-                        defaultValue={settings['registration_open'] || 'true'}
-                        onChange={(e) => updateSetting('registration_open', e.target.value)}
+                        value={localSettings['registration_open'] || 'true'}
+                        onChange={(e) => handleSettingChange('registration_open', e.target.value)}
                       >
                         <option value="true">Open (Accepting Entries)</option>
                         <option value="false">Closed (Disabled)</option>
@@ -1536,8 +1646,8 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                           <label className="form-label">Sports Registration Form URL</label>
                           <input
                             type="text"
-                            defaultValue={settings['google_form_sports'] || ''}
-                            onBlur={(e) => updateSetting('google_form_sports', e.target.value)}
+                            value={localSettings['google_form_sports'] || ''}
+                            onChange={(e) => handleSettingChange('google_form_sports', e.target.value)}
                             className="form-input"
                             placeholder="https://forms.gle/..."
                           />
@@ -1546,18 +1656,8 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                           <label className="form-label">Cultural Registration Form URL</label>
                           <input
                             type="text"
-                            defaultValue={settings['google_form_cultural'] || ''}
-                            onBlur={(e) => updateSetting('google_form_cultural', e.target.value)}
-                            className="form-input"
-                            placeholder="https://forms.gle/..."
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <label className="form-label">Volunteer Signup Form URL</label>
-                          <input
-                            type="text"
-                            defaultValue={settings['google_form_volunteer'] || ''}
-                            onBlur={(e) => updateSetting('google_form_volunteer', e.target.value)}
+                            value={localSettings['google_form_cultural'] || ''}
+                            onChange={(e) => handleSettingChange('google_form_cultural', e.target.value)}
                             className="form-input"
                             placeholder="https://forms.gle/..."
                           />
@@ -1567,33 +1667,23 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
 
                     <div className="form-group">
                       <label className="form-label">Announcement Banner</label>
-                      <div className="flex gap-4">
-                        <textarea
-                          defaultValue={settings['announcement_text'] || ''}
-                          className="form-input min-h-[100px] py-4"
-                          placeholder="Enter global announcement..."
-                          onBlur={(e) => updateSetting('announcement_text', e.target.value)}
-                        />
-                        <button className="btn-ghost px-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest h-fit">
-                          <Save size={14} />
-                        </button>
-                      </div>
+                      <textarea
+                        value={localSettings['announcement_text'] || ''}
+                        className="form-input min-h-[100px] py-4"
+                        placeholder="Enter global announcement..."
+                        onChange={(e) => handleSettingChange('announcement_text', e.target.value)}
+                      />
                     </div>
 
                     <div className="form-group">
                       <label className="form-label">Footer Copyright Text</label>
-                      <div className="flex gap-4">
-                        <input
-                          type="text"
-                          defaultValue={settings['footer_text'] || ''}
-                          className="form-input"
-                          placeholder="e.g. © 2026 UCSF. All rights reserved."
-                          onBlur={(e) => updateSetting('footer_text', e.target.value)}
-                        />
-                        <button className="btn-ghost px-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest">
-                          <Save size={14} />
-                        </button>
-                      </div>
+                      <input
+                        type="text"
+                        value={localSettings['footer_text'] || ''}
+                        className="form-input"
+                        placeholder="e.g. © 2026 UCSF. All rights reserved."
+                        onChange={(e) => handleSettingChange('footer_text', e.target.value)}
+                      />
                     </div>
                   </div>
 
@@ -1605,32 +1695,49 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                         <label className="form-label">Instagram URL</label>
                         <input
                           type="text"
-                          defaultValue={settings['instagram_url'] || ''}
+                          value={localSettings['instagram_url'] || ''}
                           className="form-input"
-                          onBlur={(e) => updateSetting('instagram_url', e.target.value)}
+                          onChange={(e) => handleSettingChange('instagram_url', e.target.value)}
                         />
                       </div>
                       <div className="form-group">
                         <label className="form-label">Facebook URL</label>
                         <input
                           type="text"
-                          defaultValue={settings['facebook_url'] || ''}
+                          value={localSettings['facebook_url'] || ''}
                           className="form-input"
-                          onBlur={(e) => updateSetting('facebook_url', e.target.value)}
+                          onChange={(e) => handleSettingChange('facebook_url', e.target.value)}
                         />
                       </div>
                       <div className="form-group">
                         <label className="form-label">YouTube Stream URL</label>
                         <input
                           type="text"
-                          defaultValue={settings['youtube_url'] || ''}
+                          value={localSettings['youtube_url'] || ''}
                           className="form-input"
-                          onBlur={(e) => updateSetting('youtube_url', e.target.value)}
+                          onChange={(e) => handleSettingChange('youtube_url', e.target.value)}
                         />
                       </div>
                     </div>
                   </div>
                 </div>
+
+                {/* Save Button */}
+                {hasChanges && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-12 pt-8 border-t border-border flex justify-end"
+                  >
+                    <button 
+                      onClick={saveAllSettings}
+                      className="btn-primary px-12 py-4 text-sm flex items-center gap-3 shadow-[0_0_30px_rgba(245,197,24,0.2)]"
+                    >
+                      <Save size={20} />
+                      Save All Changes
+                    </button>
+                  </motion.div>
+                )}
               </div>
 
               {/* Raw Settings (For power users) */}
@@ -1649,6 +1756,78 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
           )}
         </AnimatePresence>
       </main>
+
+      {/* Gallery Modal */}
+      <AnimatePresence>
+        {galleryModal?.isOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-ebony/90 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md card-glass p-8 space-y-6"
+            >
+              <h3 className="text-2xl text-text tracking-wide">
+                {galleryModal.isUrl ? 'Add Media via URL' : 'Upload Media'}
+              </h3>
+              
+              <div className="space-y-4">
+                <div className="form-group">
+                  <label className="form-label">Title</label>
+                  <input
+                    type="text"
+                    value={galleryFormData.title}
+                    onChange={(e) => setGalleryFormData({ ...galleryFormData, title: e.target.value })}
+                    className="form-input"
+                    placeholder="Enter media title"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Year</label>
+                  <select
+                    value={galleryFormData.year}
+                    onChange={(e) => setGalleryFormData({ ...galleryFormData, year: parseInt(e.target.value) })}
+                    className="form-input"
+                  >
+                    <option value={2026}>2026</option>
+                    <option value={2025}>2025</option>
+                  </select>
+                </div>
+
+                {galleryModal.isUrl && (
+                  <div className="form-group">
+                    <label className="form-label">Media URL</label>
+                    <input
+                      type="text"
+                      value={galleryFormData.url}
+                      onChange={(e) => setGalleryFormData({ ...galleryFormData, url: e.target.value })}
+                      className="form-input"
+                      placeholder="https://example.com/image.jpg"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-4 pt-4">
+                <button
+                  onClick={() => setGalleryModal(null)}
+                  className="flex-1 btn-ghost py-3 text-[10px] font-bold uppercase tracking-widest"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleGallerySubmit}
+                  disabled={loading || !galleryFormData.title || (galleryModal.isUrl && !galleryFormData.url)}
+                  className="flex-1 btn-primary py-3 text-[10px] font-bold uppercase tracking-widest disabled:opacity-50"
+                >
+                  {loading ? 'Processing...' : 'Confirm'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Confirmation Modal */}
       <AnimatePresence>
@@ -1687,9 +1866,9 @@ export default function AdminPanel({ matches, houses, schedule, categories, gall
                 </button>
                 <button
                   onClick={confirmModal.onConfirm}
-                  className="flex-1 bg-maple hover:bg-maple/90 text-white py-4 font-ui text-xs font-bold uppercase tracking-widest transition-all shadow-lg shadow-maple/20"
+                  className="flex-1 bg-maple hover:bg-maple/90 text-bg py-4 font-ui text-xs font-bold uppercase tracking-widest transition-all shadow-lg shadow-maple/20"
                 >
-                  Confirm Delete
+                  {confirmModal.title.toLowerCase().includes('delete') ? 'Confirm Delete' : 'Confirm Changes'}
                 </button>
               </div>
             </motion.div>
