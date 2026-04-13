@@ -2,7 +2,7 @@ import React from 'react';
 import { Match } from '../types';
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
-import { MapPin, Clock } from 'lucide-react';
+import { MapPin, Clock, Trophy } from 'lucide-react';
 
 interface MatchCardProps {
   match: Match;
@@ -166,6 +166,12 @@ const MatchCard = React.memo(({ match, compact, onClick }: MatchCardProps) => {
             <div className="flex items-center gap-2 font-ui text-[10px] text-muted font-bold uppercase tracking-widest">
               <Clock size={14} className="text-maple" />
               {new Date(match.match_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </div>
+          )}
+          {match.man_of_the_match && (
+            <div className="flex items-center gap-2 font-ui text-[10px] text-maple font-bold uppercase tracking-widest bg-maple/10 px-4 py-1 rounded-full border border-maple/20">
+              <Trophy size={14} />
+              MOTM: {match.man_of_the_match}
             </div>
           )}
         </div>

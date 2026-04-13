@@ -19,16 +19,13 @@ export type Category = {
   gender: string | null;
   eligible_years: string | null;
   category_type: 'sport' | 'cultural';
-  image_url?: string | null;
   special_rules?: string | null;
   is_active?: boolean;
   registration_url?: string | null;
   team_size?: string;
-  on_field?: string;
   duration?: string;
-  deadline?: string;
+  image_url?: string | null;
   judging_criteria?: { criterion: string; weight: string }[];
-  submission_format?: string;
 };
 
 export type MatchStatus = 'upcoming' | 'live' | 'completed';
@@ -46,11 +43,24 @@ export type Match = {
   venue: string | null;
   match_time: string | null;
   eligible_years: string | null;
+  man_of_the_match?: string | null;
   // Joined fields
   category?: Category;
   team1?: House;
   team2?: House;
   winner?: House;
+};
+
+export type CulturalResult = {
+  id: number;
+  category_id: string;
+  house_id: string;
+  rank: number | null;
+  points: number | null;
+  comments?: string | null;
+  // Joined fields
+  category?: Category;
+  house?: House;
 };
 
 export type ScheduleItem = {
@@ -99,5 +109,23 @@ export type Notice = {
   title: string;
   content: string;
   priority: 'low' | 'medium' | 'high';
+  created_at: string;
+};
+
+export type Profile = {
+  id: string;
+  email: string;
+  is_super_admin: boolean;
+  created_at: string;
+};
+
+export type StagedChange = {
+  id: number;
+  table_name: string;
+  record_id: string;
+  updates: any;
+  created_by: string;
+  created_by_email: string;
+  status: 'pending' | 'approved' | 'discarded';
   created_at: string;
 };

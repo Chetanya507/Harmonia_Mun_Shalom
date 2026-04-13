@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import Papa from 'papaparse';
 import { supabase } from '../lib/supabase';
 import { 
   Shield, 
@@ -20,6 +21,7 @@ import {
   Layers,
   FileText,
   Upload,
+  ExternalLink,
   Image as ImageIcon,
   X,
   Bell,
@@ -27,13 +29,15 @@ import {
   FileWarning,
   Share2,
   Clock,
-  MapPin
+  MapPin,
+  CheckCircle,
+  History
 } from 'lucide-react';
-import { Match, House, ScheduleItem, Category, Notice } from '../types';
+import { Match, House, ScheduleItem, Category, Notice, StagedChange, Profile } from '../types';
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 
-type AdminTab = 'matches' | 'schedule' | 'houses' | 'categories' | 'notices' | 'settings';
+type AdminTab = 'results' | 'matches' | 'schedule' | 'categories' | 'notices' | 'gallery' | 'leaderboards' | 'spreadsheet' | 'settings' | 'changes';
 
 interface AdminPanelProps {
   matches: Match[];
@@ -41,20 +45,431 @@ interface AdminPanelProps {
   schedule: ScheduleItem[];
   categories: Category[];
   notices: Notice[];
+  gallery: any[];
+  culturalResults: any[];
+  stagedChanges: StagedChange[];
+  profile: Profile | null;
   settings: Record<string, string>;
   refresh: () => void;
 }
 
-export default function AdminPanel({ matches, houses, schedule, categories, notices, settings, refresh }: AdminPanelProps) {
+export default function AdminPanel({ matches, houses, schedule, categories, notices, gallery, culturalResults, stagedChanges, profile, settings, refresh }: AdminPanelProps) {
   const [session, setSession] = useState<any>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<AdminTab>('matches');
+  const CategoryCard = ({ cat }: { cat: Category }) => {
+    return (
+      <motion.div 
+        layout
+        className="bg-bg2 border border-white/5 rounded-[3rem] p-10 group hover:border-maple/30 transition-all shadow-2xl space-y-8 relative overflow-hidden"
+      >
+      <div className="flex items-start justify-between gap-8">
+        <div className="relative group/icon w-24 h-24 bg-white/5 rounded-[2rem] flex items-center justify-center text-5xl border border-white/5 group-hover:border-maple/50 transition-all overflow-hidden shadow-inner">
+          {cat.image_url ? (
+            <img 
+              src={cat.image_url} 
+              alt={cat.name} 
+              className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <span className="relative z-10">{cat.icon || <Layers size={32} className="text-muted/30" />}</span>
+          )}
+          <input
+            type="text"
+            defaultValue={cat.icon || ''}
+            placeholder="Emoji"
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+            onBlur={(e) => updateCategory(cat.id, { icon: e.target.value })}
+          />
+          <div className="absolute inset-0 bg-maple/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+            <span className="text-[8px] font-bold uppercase tracking-widest text-maple mt-14">Edit Icon</span>
+          </div>
+        </div>
+        <div className="flex-1 space-y-5">
+          <div className="flex items-center justify-between">
+            <input
+              type="text"
+              defaultValue={cat.name}
+              className="w-full bg-transparent border-none text-3xl font-display uppercase tracking-tighter text-white outline-none focus:text-maple transition-colors"
+              onBlur={(e) => updateCategory(cat.id, { name: e.target.value })}
+            />
+            <button 
+              onClick={() => deleteCategory(cat.id)}
+              className="w-10 h-10 bg-danger/5 hover:bg-danger text-danger hover:text-white rounded-xl transition-all border border-danger/10 flex items-center justify-center active:scale-90 opacity-0 group-hover:opacity-100"
+            >
+              <Trash2 size={18} />
+            </button>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-xl border border-white/5 shadow-inner">
+              <span className="font-ui text-[9px] font-bold text-muted uppercase tracking-[0.2em]">Order</span>
+              <input
+                type="number"
+                defaultValue={cat.sort_order}
+                className="w-10 bg-transparent border-none text-white text-[11px] font-bold text-center outline-none focus:text-maple"
+                onBlur={(e) => updateCategory(cat.id, { sort_order: parseInt(e.target.value) })}
+              />
+            </div>
+            <div className="flex items-center gap-2 bg-white/5 p-1 border border-white/5 rounded-xl">
+              {['sport', 'cultural'].map((type) => (
+                <button
+                  key={type}
+                  onClick={() => updateCategory(cat.id, { category_type: type as any })}
+                  className={cn(
+                    "px-4 py-2 font-ui text-[9px] font-bold uppercase tracking-[0.2em] transition-all rounded-lg whitespace-nowrap",
+                    (cat.category_type || 'sport') === type ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
+                  )}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-4 pt-4">
+        <div className="space-y-2">
+          <label className="font-ui text-[9px] font-bold text-muted uppercase tracking-[0.3em] ml-1">Image URL</label>
+          <div className="relative group/img flex gap-3">
+            <input
+              type="text"
+              defaultValue={cat.image_url || ''}
+              placeholder="https://images.unsplash.com/..."
+              className="flex-1 bg-white/5 border border-white/5 rounded-2xl px-5 py-4 text-[10px] font-bold tracking-widest text-muted outline-none focus:border-maple/50 focus:text-text transition-all shadow-inner pr-12"
+              onBlur={(e) => updateCategory(cat.id, { image_url: e.target.value })}
+              id={`cat-img-${cat.id}`}
+            />
+            <button 
+              onClick={() => document.getElementById(`cat-upload-${cat.id}`)?.click()}
+              className="bg-white/5 hover:bg-white/10 text-white p-4 rounded-2xl border border-white/5 transition-all active:scale-90 shadow-lg"
+              title="Upload Image"
+            >
+              <Upload size={18} />
+            </button>
+            <input 
+              type="file"
+              id={`cat-upload-${cat.id}`}
+              className="hidden"
+              accept="image/*"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file || !supabase) return;
+                setLoading(true);
+                try {
+                  const fileName = `cat_${cat.id}_${Date.now()}`;
+                  const { error: uploadError } = await supabase.storage.from('ucsf-media').upload(fileName, file);
+                  if (uploadError) throw uploadError;
+                  const { data: { publicUrl } } = supabase.storage.from('ucsf-media').getPublicUrl(fileName);
+                  updateCategory(cat.id, { image_url: publicUrl });
+                  const input = document.getElementById(`cat-img-${cat.id}`) as HTMLInputElement;
+                  if (input) input.value = publicUrl;
+                } catch (err: any) {
+                  handleSupabaseError(err, 'Category image upload failed');
+                } finally {
+                  setLoading(false);
+                }
+              }}
+            />
+            <div className="absolute right-16 top-1/2 -translate-y-1/2 text-muted/30 group-focus-within/img:text-maple transition-colors pointer-events-none">
+              <ImageIcon size={16} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-6 pt-8 border-t border-white/5">
+        {[
+          { label: 'Gender', key: 'gender', placeholder: 'Boys/Girls' },
+          { label: 'Team Size', key: 'team_size', placeholder: '11 Players' },
+          { label: 'Duration', key: 'duration', placeholder: '20 mins' }
+        ].map((field) => (
+          <div key={field.key} className="space-y-2">
+            <label className="font-ui text-[9px] font-bold text-muted uppercase tracking-[0.3em] ml-1">{field.label}</label>
+            <input
+              type="text"
+              defaultValue={(cat[field.key as keyof typeof cat] as any) || ''}
+              placeholder={field.placeholder}
+              className="w-full bg-white/5 border border-white/5 rounded-2xl px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-muted outline-none focus:border-maple/50 focus:text-text transition-all shadow-inner"
+              onBlur={(e) => updateCategory(cat.id, { [field.key]: e.target.value })}
+            />
+          </div>
+        ))}
+        
+        {/* Cultural Results Section */}
+        {cat.category_type === 'cultural' && (
+          <div className="col-span-2 pt-8 border-t border-white/5 space-y-6">
+            <div className="flex items-center justify-between">
+              <label className="font-ui text-[10px] font-bold text-maple uppercase tracking-[0.3em]">Dynasty Rankings</label>
+              <button 
+                onClick={() => addCulturalResult(cat.id)}
+                className="text-maple hover:text-white transition-colors flex items-center gap-2 font-ui text-[9px] font-bold uppercase tracking-widest"
+              >
+                <Plus size={14} /> Add Rank
+              </button>
+            </div>
+            <div className="space-y-4">
+              {culturalResults.filter(r => r.category_id === cat.id).sort((a, b) => a.rank - b.rank).map((result) => (
+                <div key={result.id} className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5 group/res">
+                  <div className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center font-display text-maple">
+                    <input
+                      type="number"
+                      defaultValue={result.rank}
+                      className="w-full bg-transparent border-none text-center outline-none"
+                      onBlur={(e) => updateCulturalResult(result.id, { rank: parseInt(e.target.value) })}
+                    />
+                  </div>
+                  <select
+                    value={result.house_id}
+                    onChange={(e) => updateCulturalResult(result.id, { house_id: e.target.value })}
+                    className="flex-1 bg-transparent border-none text-[10px] font-bold uppercase tracking-widest text-white outline-none"
+                  >
+                    {houses.map(h => <option key={h.id} value={h.id} className="bg-[#0d1b33]">{h.name}</option>)}
+                  </select>
+                  <div className="flex items-center gap-2 bg-white/5 px-3 py-1 rounded-lg">
+                    <span className="text-[8px] font-bold text-muted uppercase">Pts</span>
+                    <input
+                      type="number"
+                      defaultValue={result.points}
+                      className="w-12 bg-transparent border-none text-[10px] font-bold text-maple text-center outline-none"
+                      onBlur={(e) => updateCulturalResult(result.id, { points: parseInt(e.target.value) })}
+                    />
+                  </div>
+                  <button 
+                    onClick={() => deleteCulturalResult(result.id)}
+                    className="opacity-0 group-hover/res:opacity-100 text-danger/50 hover:text-danger transition-all"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </motion.div>
+    );
+  };
+
+  const [activeTab, setActiveTab] = useState<AdminTab>('results');
   const [localSettings, setLocalSettings] = useState<Record<string, string>>({});
   const [hasChanges, setHasChanges] = useState(false);
+  const [selectedResultCategory, setSelectedResultCategory] = useState<string | null>(null);
+
+  // Staging area for all data changes
+  const [pendingChanges, setPendingChanges] = useState<Record<string, Record<string, any>>>({
+    categories: {},
+    matches: {},
+    schedule: {},
+    notices: {},
+    cultural_results: {},
+    houses: {},
+    settings: {}
+  });
+
+  // Load pending changes from localStorage on mount
+  React.useEffect(() => {
+    const saved = localStorage.getItem('ucsf_pending_changes');
+    if (saved) {
+      try {
+        setPendingChanges(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to load pending changes', e);
+      }
+    }
+  }, []);
+
+  // Auto-save pending changes to localStorage
+  React.useEffect(() => {
+    localStorage.setItem('ucsf_pending_changes', JSON.stringify(pendingChanges));
+  }, [pendingChanges]);
+
+  const hasPendingChanges = useMemo(() => {
+    return Object.values(pendingChanges).some(table => Object.keys(table).length > 0) || hasChanges;
+  }, [pendingChanges, hasChanges]);
+
+  const stageChange = (table: string, id: string | number, updates: any) => {
+    setPendingChanges(prev => ({
+      ...prev,
+      [table]: {
+        ...prev[table],
+        [id]: {
+          ...(prev[table][id] || {}),
+          ...updates
+        }
+      }
+    }));
+  };
+
+  const publishAllChanges = async () => {
+    if (!supabase || !(await checkSession())) return;
+    
+    // If super admin, publish directly. If not, submit for approval.
+    const isSuperAdmin = profile?.is_super_admin;
+
+    setConfirmModal({
+      isOpen: true,
+      title: isSuperAdmin ? 'Publish All Changes' : 'Submit for Approval',
+      message: isSuperAdmin 
+        ? 'This will push all staged changes to the live website. Are you sure?'
+        : 'Your changes will be submitted to the Super Admin for approval. Continue?',
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          if (isSuperAdmin) {
+            // 1. Settings
+            if (hasChanges) {
+              const updates = Object.entries(localSettings).map(([key, val]) => ({
+                key_name: key,
+                val: val
+              }));
+              const { error } = await supabase.from('settings').upsert(updates, { onConflict: 'key_name' });
+              if (error) throw error;
+            }
+
+            // 2. Other tables
+            for (const [table, changes] of Object.entries(pendingChanges)) {
+              if (table === 'settings') continue;
+              for (const [id, updates] of Object.entries(changes)) {
+                const { error } = await supabase.from(table).update(updates).eq('id', id);
+                if (error) throw error;
+              }
+            }
+
+            await supabase.rpc('recompute_points');
+            setSuccess('All changes published successfully!');
+          } else {
+            // Submit to staged_changes table
+            const stagedEntries: any[] = [];
+            
+            // Handle settings
+            if (hasChanges) {
+              stagedEntries.push({
+                table_name: 'settings',
+                record_id: 'batch_settings',
+                updates: localSettings,
+                created_by: session.user.id,
+                created_by_email: session.user.email
+              });
+            }
+
+            // Handle other tables
+            for (const [table, changes] of Object.entries(pendingChanges)) {
+              if (table === 'settings') continue;
+              for (const [id, updates] of Object.entries(changes)) {
+                stagedEntries.push({
+                  table_name: table,
+                  record_id: String(id),
+                  updates: updates,
+                  created_by: session.user.id,
+                  created_by_email: session.user.email
+                });
+              }
+            }
+
+            if (stagedEntries.length > 0) {
+              const { error } = await supabase.from('staged_changes').insert(stagedEntries);
+              if (error) throw error;
+              setSuccess('Changes submitted for approval!');
+            }
+          }
+
+          setPendingChanges({
+            categories: {},
+            matches: {},
+            schedule: {},
+            notices: {},
+            cultural_results: {},
+            houses: {},
+            settings: {}
+          });
+          localStorage.removeItem('ucsf_pending_changes');
+          setHasChanges(false);
+          setTimeout(() => setSuccess(null), 3000);
+          refresh();
+        } catch (err: any) {
+          handleSupabaseError(err, isSuperAdmin ? 'Failed to publish changes' : 'Failed to submit changes');
+        } finally {
+          setLoading(true); // Keep loading until refresh completes
+          setTimeout(() => setLoading(false), 1000);
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    });
+  };
+
+  const approveChange = async (change: StagedChange) => {
+    if (!supabase || !(await checkSession())) return;
+    setLoading(true);
+    try {
+      if (change.table_name === 'settings') {
+        const updates = Object.entries(change.updates).map(([key, val]) => ({
+          key_name: key,
+          val: val
+        }));
+        const { error } = await supabase.from('settings').upsert(updates, { onConflict: 'key_name' });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from(change.table_name).update(change.updates).eq('id', change.record_id);
+        if (error) throw error;
+      }
+
+      const { error: updateError } = await supabase.from('staged_changes').update({ status: 'approved' }).eq('id', change.id);
+      if (updateError) throw updateError;
+
+      await supabase.rpc('recompute_points');
+      setSuccess('Change approved and published!');
+      setTimeout(() => setSuccess(null), 3000);
+      refresh();
+    } catch (err: any) {
+      handleSupabaseError(err, 'Failed to approve change');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const discardStagedChange = async (id: number) => {
+    if (!supabase || !(await checkSession())) return;
+    setLoading(true);
+    try {
+      const { error } = await supabase.from('staged_changes').update({ status: 'discarded' }).eq('id', id);
+      if (error) throw error;
+      setSuccess('Change discarded');
+      setTimeout(() => setSuccess(null), 3000);
+      refresh();
+    } catch (err: any) {
+      handleSupabaseError(err, 'Failed to discard change');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const discardAllChanges = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Discard Changes',
+      message: 'Are you sure you want to discard all staged changes? This cannot be undone.',
+      onConfirm: () => {
+        setPendingChanges({
+          categories: {},
+          matches: {},
+          schedule: {},
+          notices: {},
+          cultural_results: {},
+          houses: {},
+          settings: {}
+        });
+        localStorage.removeItem('ucsf_pending_changes');
+        setLocalSettings(settings);
+        setHasChanges(false);
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+      }
+    });
+  };
 
   // Sync local settings when settings prop changes
   React.useEffect(() => {
@@ -68,34 +483,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
   };
 
   const saveAllSettings = async () => {
-    if (!supabase || !(await checkSession())) return;
-    
-    setConfirmModal({
-      isOpen: true,
-      title: 'Confirm Changes',
-      message: 'Are you sure you want to save all configuration changes? This will update the live site immediately.',
-      onConfirm: async () => {
-        setLoading(true);
-        try {
-          const updates = Object.entries(localSettings).map(([key, val]) => ({
-            key_name: key,
-            val: val
-          }));
-          
-          const { error } = await supabase.from('settings').upsert(updates, { onConflict: 'key_name' });
-          if (error) throw error;
-          
-          setSuccess('All settings saved successfully!');
-          setTimeout(() => setSuccess(null), 3000);
-          refresh();
-        } catch (err: any) {
-          handleSupabaseError(err, 'Failed to save settings');
-        } finally {
-          setLoading(false);
-          setConfirmModal(prev => ({ ...prev, isOpen: false }));
-        }
-      }
-    });
+    await publishAllChanges();
   };
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -160,22 +548,14 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
   };
 
   const updateMatch = async (matchId: number, updates: Partial<Match>) => {
-    if (!supabase || !(await checkSession())) return;
-    setLoading(true);
-    const { error } = await supabase.from('matches').update(updates).eq('id', matchId);
-    if (error) handleSupabaseError(error, 'Failed to update match');
-    else {
-      await supabase.rpc('recompute_points');
-      refresh();
-      setLoading(false);
-    }
+    stageChange('matches', matchId, updates);
   };
 
-  const addMatch = async () => {
+  const addMatch = async (categoryId?: string) => {
     if (!supabase || !(await checkSession())) return;
     setLoading(true);
     const { error } = await supabase.from('matches').insert([{
-      category_id: categories[0]?.id,
+      category_id: categoryId || categories[0]?.id,
       match_no: matches.length + 1,
       team1_id: houses[0]?.id,
       team2_id: houses[1]?.id,
@@ -211,14 +591,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
   };
 
   const updateSchedule = async (itemId: number, updates: Partial<ScheduleItem>) => {
-    if (!supabase || !(await checkSession())) return;
-    setLoading(true);
-    const { error } = await supabase.from('schedule').update(updates).eq('id', itemId);
-    if (error) handleSupabaseError(error, 'Failed to update schedule');
-    else {
-      refresh();
-      setLoading(false);
-    }
+    stageChange('schedule', itemId, updates);
   };
 
   const addSchedule = async () => {
@@ -259,37 +632,8 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
     });
   };
 
-  const updateHouse = async (houseId: string, updates: Partial<House>) => {
-    if (!supabase || !(await checkSession())) return;
-    setLoading(true);
-    setError(null);
-    
-    // Clean up numeric values
-    if ('points' in updates && typeof updates.points === 'number' && isNaN(updates.points)) {
-      updates.points = 0;
-    }
-    if ('rank_pos' in updates && typeof updates.rank_pos === 'number' && isNaN(updates.rank_pos)) {
-      updates.rank_pos = 1;
-    }
-
-    const { error } = await supabase.from('houses').update(updates).eq('id', houseId);
-    if (error) {
-      handleSupabaseError(error, 'Failed to update house');
-    } else {
-      refresh();
-      setLoading(false);
-    }
-  };
-
   const updateCategory = async (catId: string, updates: Partial<Category>) => {
-    if (!supabase || !(await checkSession())) return;
-    setLoading(true);
-    const { error } = await supabase.from('categories').update(updates).eq('id', catId);
-    if (error) handleSupabaseError(error, 'Failed to update category');
-    else {
-      refresh();
-      setLoading(false);
-    }
+    stageChange('categories', catId, updates);
   };
 
   const addCategory = async () => {
@@ -328,45 +672,6 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
     });
   };
 
-  const addHouse = async () => {
-    if (!supabase || !(await checkSession())) return;
-    setLoading(true);
-    const { error } = await supabase.from('houses').insert([{
-      name: 'New House',
-      color: '#ffffff',
-      mascot: '',
-      points: 0,
-      rank_pos: houses.length + 1,
-      logo_url: 'https://api.dicebear.com/7.x/shapes/svg?seed=NewHouse',
-      banner_url: 'https://picsum.photos/seed/house/1200/400'
-    }]);
-    if (error) handleSupabaseError(error, 'Failed to add house');
-    else {
-      refresh();
-      setLoading(false);
-    }
-  };
-
-  const deleteHouse = async (id: string) => {
-    if (!supabase || !(await checkSession())) return;
-    
-    setConfirmModal({
-      isOpen: true,
-      title: 'Delete House',
-      message: 'Are you sure you want to delete this house? This might affect matches linked to it.',
-      onConfirm: async () => {
-        setLoading(true);
-        const { error } = await supabase.from('houses').delete().eq('id', id);
-        if (error) handleSupabaseError(error, 'Failed to delete house');
-        else {
-          refresh();
-          setLoading(false);
-          setConfirmModal(prev => ({ ...prev, isOpen: false }));
-        }
-      }
-    });
-  };
-
   const updateSetting = async (key: string, val: string) => {
     if (!supabase || !(await checkSession())) return;
     setLoading(true);
@@ -380,24 +685,32 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
     }
   };
 
+  const updateNotice = async (id: number, updates: Partial<Notice>) => {
+    stageChange('notices', id, updates);
+  };
+
   const handleNoticeSubmit = async () => {
     if (!supabase || !(await checkSession())) return;
-    setLoading(true);
-    try {
-      if (noticeModal?.notice) {
-        const { error } = await supabase.from('notices').update(noticeFormData).eq('id', noticeModal.notice.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('notices').insert([noticeFormData]);
-        if (error) throw error;
-      }
+    
+    if (noticeModal?.notice) {
+      // It's an update, stage it
+      stageChange('notices', noticeModal.notice.id, noticeFormData);
       setNoticeModal(null);
       setNoticeFormData({ title: '', content: '', priority: 'low' });
-      refresh();
-    } catch (err: any) {
-      handleSupabaseError(err, 'Failed to save notice');
-    } finally {
-      setLoading(false);
+    } else {
+      // It's a new notice, we'll insert it immediately as it's hard to stage without ID
+      setLoading(true);
+      try {
+        const { error } = await supabase.from('notices').insert([noticeFormData]);
+        if (error) throw error;
+        setNoticeModal(null);
+        setNoticeFormData({ title: '', content: '', priority: 'low' });
+        refresh();
+      } catch (err: any) {
+        handleSupabaseError(err, 'Failed to save notice');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -417,6 +730,192 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
         } catch (err: any) {
           handleSupabaseError(err, 'Failed to delete notice');
         } finally {
+          setLoading(false);
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    });
+  };
+
+  const getEmbedUrl = (url: string) => {
+    if (!url) return '';
+    if (url.includes('docs.google.com/spreadsheets')) {
+      if (url.includes('/edit')) {
+        return url.split('/edit')[0] + '/preview';
+      }
+      if (!url.includes('/preview') && !url.includes('/pubhtml')) {
+        return url + (url.includes('?') ? '&' : '?') + 'rm=minimal';
+      }
+    }
+    return url;
+  };
+
+  const addGalleryItems = async (files: FileList) => {
+    if (!supabase || !(await checkSession())) return;
+    setLoading(true);
+    
+    try {
+      const uploadPromises = Array.from(files).map(async (file) => {
+        const fileName = `gallery_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+        const { error: uploadError } = await supabase.storage.from('ucsf-media').upload(fileName, file);
+        if (uploadError) throw uploadError;
+        
+        const { data: { publicUrl } } = supabase.storage.from('ucsf-media').getPublicUrl(fileName);
+        
+        return {
+          title: '', // No name initially as requested
+          url: publicUrl,
+          type: file.type.startsWith('video') ? 'video' : 'image',
+          year: '2026'
+        };
+      });
+
+      const newItems = await Promise.all(uploadPromises);
+      const { error } = await supabase.from('gallery').insert(newItems);
+      if (error) throw error;
+      
+      refresh();
+      setSuccess(`Successfully uploaded ${files.length} items to gallery`);
+    } catch (err: any) {
+      handleSupabaseError(err, 'Failed to upload gallery items');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteGalleryItem = async (id: number) => {
+    if (!supabase || !(await checkSession())) return;
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Media',
+      message: 'Are you sure you want to delete this gallery item?',
+      onConfirm: async () => {
+        setLoading(true);
+        const { error } = await supabase.from('gallery').delete().eq('id', id);
+        if (error) handleSupabaseError(error, 'Failed to delete gallery item');
+        else {
+          refresh();
+          setLoading(false);
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    });
+  };
+
+  const syncFromGoogleSheets = async () => {
+    const spreadsheetUrl = settings['spreadsheet_url'];
+    if (!spreadsheetUrl) {
+      setError('No spreadsheet URL configured in settings');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      // Convert Google Sheets URL to CSV export URL
+      let csvUrl = spreadsheetUrl;
+      if (spreadsheetUrl.includes('/edit')) {
+        csvUrl = spreadsheetUrl.split('/edit')[0] + '/export?format=csv';
+      } else if (!spreadsheetUrl.endsWith('format=csv')) {
+        csvUrl = spreadsheetUrl + (spreadsheetUrl.includes('?') ? '&' : '?') + 'format=csv';
+      }
+
+      const response = await fetch(csvUrl);
+      if (!response.ok) throw new Error('Failed to fetch spreadsheet data');
+      
+      const csvText = await response.text();
+      
+      Papa.parse(csvText, {
+        header: true,
+        skipEmptyLines: true,
+        complete: async (results) => {
+          const data = results.data as any[];
+          if (data.length === 0) {
+            setError('No data found in spreadsheet');
+            setLoading(false);
+            return;
+          }
+
+          // Expected columns: name, house, category, grade, section, role
+          // Map house names and category names to IDs
+          const houseMap = new Map(houses.map(h => [h.name.toLowerCase(), h.id]));
+          const categoryMap = new Map(categories.map(c => [c.name.toLowerCase(), c.id]));
+
+          const newStudents = data.map(row => ({
+            name: row.name || row.Name || '',
+            house_id: houseMap.get((row.house || row.House || row.house_name || '').toLowerCase()),
+            category_id: categoryMap.get((row.category || row.Category || row.category_name || '').toLowerCase()),
+            grade: row.grade || row.Grade || '',
+            section: row.section || row.Section || '',
+            role: row.role || row.Role || ''
+          })).filter(s => s.name && s.house_id && s.category_id);
+
+          if (newStudents.length === 0) {
+            setError('No valid students found. Check column names (name, house, category, grade, section, role)');
+            setLoading(false);
+            return;
+          }
+
+          // Delete existing students and insert new ones
+          // Note: selected_students table is removed, so we should probably remove this logic or update it to something else
+          // For now, I'll just comment it out as the user wants to remove the feature.
+          /*
+          const { error: deleteError } = await supabase!.from('selected_students').delete().neq('id', 0);
+          if (deleteError) throw deleteError;
+
+          const { error: insertError } = await supabase!.from('selected_students').insert(newStudents);
+          if (insertError) throw insertError;
+          */
+
+          setSuccess(`Successfully imported ${newStudents.length} students (Note: selected students feature is disabled)`);
+          refresh();
+          setLoading(false);
+        },
+        error: (err: any) => {
+          setError(`CSV Parsing Error: ${err.message}`);
+          setLoading(false);
+        }
+      });
+    } catch (err: any) {
+      setError(`Import Error: ${err.message}`);
+      setLoading(false);
+    }
+  };
+
+  const updateCulturalResult = async (id: number, updates: any) => {
+    stageChange('cultural_results', id, updates);
+  };
+
+  const addCulturalResult = async (catId: string) => {
+    if (!supabase || !(await checkSession())) return;
+    setLoading(true);
+    const { error } = await supabase.from('cultural_results').insert([{
+      category_id: catId,
+      house_id: houses[0]?.id,
+      rank: 1,
+      points: 0
+    }]);
+    if (error) handleSupabaseError(error, 'Failed to add cultural result');
+    else {
+      refresh();
+      setLoading(false);
+    }
+  };
+
+  const deleteCulturalResult = async (id: number) => {
+    if (!supabase || !(await checkSession())) return;
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Result',
+      message: 'Are you sure you want to delete this cultural result?',
+      onConfirm: async () => {
+        setLoading(true);
+        const { error } = await supabase.from('cultural_results').delete().eq('id', id);
+        if (error) handleSupabaseError(error, 'Failed to delete result');
+        else {
+          refresh();
           setLoading(false);
           setConfirmModal(prev => ({ ...prev, isOpen: false }));
         }
@@ -539,18 +1038,22 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
 
         <nav className="flex-1 overflow-y-auto p-6 space-y-2 custom-scrollbar">
           {[
+            { id: 'results', label: 'Event Results', icon: Trophy },
             { id: 'matches', label: 'Matches', icon: Activity },
             { id: 'schedule', label: 'Schedule', icon: Calendar },
-            { id: 'houses', label: 'Houses', icon: Trophy },
             { id: 'categories', label: 'Categories', icon: Layers },
             { id: 'notices', label: 'Notices', icon: Bell },
+            { id: 'gallery', label: 'Gallery', icon: ImageIcon },
+            { id: 'leaderboards', label: 'Leaderboards', icon: Trophy },
+            { id: 'spreadsheet', label: 'Spreadsheet', icon: FileText },
             { id: 'settings', label: 'Settings', icon: SettingsIcon },
+            ...(profile?.is_super_admin ? [{ id: 'changes', label: 'Approvals', icon: CheckCircle }] : []),
           ].map((item) => (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id as AdminTab)}
               className={cn(
-                "w-full flex items-center justify-between px-5 py-4 font-ui text-[11px] font-bold uppercase tracking-[0.2em] transition-all group rounded-2xl border border-transparent",
+                "w-full flex items-center justify-between px-5 py-4 font-sans text-[11px] font-bold uppercase tracking-[0.2em] transition-all group rounded-2xl border border-transparent",
                 activeTab === item.id 
                   ? "bg-maple text-bg shadow-xl shadow-maple/20 border-maple/50" 
                   : "text-muted hover:text-text hover:bg-white/5 hover:border-white/5"
@@ -566,23 +1069,40 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
               {item.id === 'settings' && hasChanges && (
                 <div className="w-2 h-2 rounded-full bg-danger animate-pulse shadow-[0_0_15px_rgba(230,57,70,0.8)]" />
               )}
+              {item.id === 'changes' && stagedChanges.filter(c => c.status === 'pending').length > 0 && (
+                <div className="bg-danger text-white text-[8px] font-bold px-2 py-0.5 rounded-full shadow-lg">
+                  {stagedChanges.filter(c => c.status === 'pending').length}
+                </div>
+              )}
             </button>
           ))}
         </nav>
 
         <div className="p-6 border-t border-white/5 space-y-6">
-          {hasChanges && (
+          {hasPendingChanges && (
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-5 bg-danger/10 border border-danger/30 rounded-[2rem] backdrop-blur-sm"
+              className="p-5 bg-maple/10 border border-maple/30 rounded-[2rem] backdrop-blur-sm space-y-3"
             >
-              <p className="font-ui text-[9px] font-bold text-danger uppercase tracking-[0.3em] mb-4 text-center">Unsaved Changes</p>
+              <div className="flex items-center justify-center gap-2 text-maple mb-1">
+                <AlertCircle size={14} />
+                <p className="font-ui text-[9px] font-bold uppercase tracking-[0.3em]">
+                  {profile?.is_super_admin ? 'Unpublished Changes' : 'Pending Approval'}
+                </p>
+              </div>
               <button 
-                onClick={saveAllSettings}
-                className="w-full py-4 bg-danger text-white font-ui text-[10px] font-bold uppercase tracking-widest hover:bg-danger/90 transition-all shadow-xl shadow-danger/30 rounded-xl active:scale-95"
+                onClick={publishAllChanges}
+                className="w-full py-4 bg-maple text-bg font-ui text-[10px] font-bold uppercase tracking-widest hover:bg-maple/90 transition-all shadow-xl shadow-maple/30 rounded-xl active:scale-95 flex items-center justify-center gap-2"
               >
-                Save Changes
+                <Save size={14} />
+                {profile?.is_super_admin ? 'Publish Changes' : 'Submit for Approval'}
+              </button>
+              <button 
+                onClick={discardAllChanges}
+                className="w-full py-3 bg-white/5 text-muted font-ui text-[9px] font-bold uppercase tracking-widest hover:bg-white/10 transition-all rounded-xl active:scale-95"
+              >
+                Discard All
               </button>
             </motion.div>
           )}
@@ -623,16 +1143,16 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
         <header className="h-24 bg-[#0d1b33]/80 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-12 flex-shrink-0 z-40">
           <div className="flex items-center gap-6">
             <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-maple border border-white/5">
+              {activeTab === 'results' && <Trophy size={24} />}
               {activeTab === 'matches' && <Activity size={24} />}
               {activeTab === 'schedule' && <Calendar size={24} />}
-              {activeTab === 'houses' && <Trophy size={24} />}
               {activeTab === 'categories' && <Layers size={24} />}
               {activeTab === 'notices' && <Bell size={24} />}
               {activeTab === 'settings' && <SettingsIcon size={24} />}
             </div>
             <div>
               <h2 className="text-3xl font-display tracking-tighter uppercase text-white leading-none">{activeTab}</h2>
-              <p className="font-ui text-[9px] font-bold text-muted uppercase tracking-[0.4em] mt-2">Management Portal</p>
+              <p className="font-sans text-[10px] font-bold text-muted uppercase tracking-[0.4em] mt-2">Management Portal</p>
             </div>
             {loading && (
               <div className="flex items-center gap-3 text-maple font-ui text-[9px] font-bold uppercase tracking-[0.3em] bg-maple/10 px-4 py-2 rounded-full border border-maple/20 ml-4 animate-pulse">
@@ -645,7 +1165,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
           <div className="flex items-center gap-8">
             <div className="hidden md:flex items-center gap-3 px-5 py-2.5 bg-white/5 border border-white/5 rounded-2xl">
               <div className="w-2 h-2 rounded-full bg-success shadow-[0_0_15px_rgba(34,197,94,0.6)] animate-pulse" />
-              <span className="font-ui text-[10px] font-bold text-muted uppercase tracking-[0.2em]">System Status: Online</span>
+              <span className="font-sans text-[10px] font-bold text-muted uppercase tracking-[0.2em]">System Status: Online</span>
             </div>
             <button 
               onClick={refresh}
@@ -699,6 +1219,145 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
             )}
 
             <AnimatePresence mode="wait">
+              {activeTab === 'results' && (
+                <motion.div
+                  key="results"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="space-y-12"
+                >
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
+                    <div>
+                      <h2 className="text-5xl font-display uppercase tracking-tighter text-white">Event Results</h2>
+                      <p className="text-muted mt-2 font-sans text-[10px] font-bold uppercase tracking-[0.3em]">Enter scores and rankings for real-time feedback</p>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 bg-white/5 p-1 border border-white/5 rounded-2xl overflow-x-auto no-scrollbar max-w-full">
+                      {categories.map(cat => (
+                        <button
+                          key={cat.id}
+                          onClick={() => setSelectedResultCategory(cat.id)}
+                          className={cn(
+                            "px-6 py-3 font-ui text-[10px] font-bold uppercase tracking-widest transition-all rounded-xl whitespace-nowrap",
+                            selectedResultCategory === cat.id ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
+                          )}
+                        >
+                          {cat.name}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {selectedResultCategory ? (
+                    <div className="space-y-8">
+                      {categories.find(c => c.id === selectedResultCategory)?.category_type === 'sport' ? (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                          {matches.filter(m => m.category_id === selectedResultCategory).map(match => (
+                            <div key={match.id} className="bg-bg2 border border-white/5 rounded-[2rem] p-8 space-y-6">
+                              <div className="flex justify-between items-center border-b border-white/5 pb-4">
+                                <span className="font-ui text-[9px] font-bold text-muted uppercase tracking-widest">Match #{match.match_no}</span>
+                                <span className="font-ui text-[9px] font-bold text-maple uppercase tracking-widest">{match.eligible_years}</span>
+                              </div>
+                              
+                              <div className="grid grid-cols-3 items-center gap-4">
+                                <div className="text-center space-y-2">
+                                  <p className="font-display text-lg uppercase truncate">{houses.find(h => h.id === match.team1_id)?.name}</p>
+                                  <input 
+                                    type="number" 
+                                    value={match.score1}
+                                    onChange={(e) => updateMatch(match.id, { score1: parseInt(e.target.value) })}
+                                    className="w-full bg-white/5 border border-white/5 rounded-xl py-3 text-center text-2xl font-display text-white outline-none focus:border-maple/50"
+                                  />
+                                </div>
+                                <div className="text-center text-muted font-display text-2xl">VS</div>
+                                <div className="text-center space-y-2">
+                                  <p className="font-display text-lg uppercase truncate">{houses.find(h => h.id === match.team2_id)?.name}</p>
+                                  <input 
+                                    type="number" 
+                                    value={match.score2}
+                                    onChange={(e) => updateMatch(match.id, { score2: parseInt(e.target.value) })}
+                                    className="w-full bg-white/5 border border-white/5 rounded-xl py-3 text-center text-2xl font-display text-white outline-none focus:border-maple/50"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="pt-4 space-y-4">
+                                <label className="font-ui text-[9px] font-bold text-muted uppercase tracking-widest block">Winner</label>
+                                <select
+                                  value={match.winner_id || ''}
+                                  onChange={(e) => updateMatch(match.id, { winner_id: e.target.value || null, status: 'completed' })}
+                                  className="w-full bg-white/5 border border-white/5 rounded-xl py-3 px-4 text-[10px] font-bold uppercase tracking-widest text-maple outline-none"
+                                >
+                                  <option value="" className="bg-bg-dark">Select Winner</option>
+                                  <option value={match.team1_id} className="bg-bg-dark">{houses.find(h => h.id === match.team1_id)?.name}</option>
+                                  <option value={match.team2_id} className="bg-bg-dark">{houses.find(h => h.id === match.team2_id)?.name}</option>
+                                  <option value="draw" className="bg-bg-dark">Draw</option>
+                                </select>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="bg-bg2 border border-white/5 rounded-[3rem] p-10 space-y-8">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-3xl font-display uppercase tracking-tighter text-white">Dynasty Rankings</h3>
+                            <button 
+                              onClick={() => addCulturalResult(selectedResultCategory)}
+                              className="btn-primary px-6 py-2 rounded-xl text-[9px]"
+                            >
+                              <Plus size={14} className="mr-2" /> Add Rank
+                            </button>
+                          </div>
+                          
+                          <div className="space-y-4">
+                            {culturalResults.filter(r => r.category_id === selectedResultCategory).sort((a, b) => a.rank - b.rank).map((result) => (
+                              <div key={result.id} className="flex items-center gap-6 bg-white/5 p-6 rounded-2xl border border-white/5 group/res">
+                                <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center font-display text-2xl text-maple">
+                                  <input
+                                    type="number"
+                                    defaultValue={result.rank}
+                                    className="w-full bg-transparent border-none text-center outline-none"
+                                    onBlur={(e) => updateCulturalResult(result.id, { rank: parseInt(e.target.value) })}
+                                  />
+                                </div>
+                                <select
+                                  value={result.house_id}
+                                  onChange={(e) => updateCulturalResult(result.id, { house_id: e.target.value })}
+                                  className="flex-1 bg-transparent border-none text-xs font-bold uppercase tracking-widest text-white outline-none"
+                                >
+                                  {houses.map(h => <option key={h.id} value={h.id} className="bg-bg-dark">{h.name}</option>)}
+                                </select>
+                                <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-xl">
+                                  <span className="text-[10px] font-bold text-muted uppercase">Points</span>
+                                  <input
+                                    type="number"
+                                    defaultValue={result.points}
+                                    className="w-16 bg-transparent border-none text-sm font-bold text-maple text-center outline-none"
+                                    onBlur={(e) => updateCulturalResult(result.id, { points: parseInt(e.target.value) })}
+                                  />
+                                </div>
+                                <button 
+                                  onClick={() => deleteCulturalResult(result.id)}
+                                  className="p-2 text-danger/50 hover:text-danger hover:bg-danger/10 rounded-lg transition-all"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="py-40 text-center card-glass">
+                      <Trophy size={48} className="mx-auto text-muted mb-4 opacity-20" />
+                      <p className="font-ui text-xs font-bold text-muted uppercase tracking-[0.3em]">Select a category to enter results</p>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+
               {activeTab === 'matches' && (
                 <motion.div
                   key="matches"
@@ -720,26 +1379,30 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                       />
                     </div>
                     <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-4 px-6 py-3 bg-white/5 border border-white/5 rounded-2xl">
-                        <Filter className="text-muted" size={18} />
-                        <select 
-                          value={categoryFilter}
-                          onChange={(e) => setCategoryFilter(e.target.value)}
-                          className="bg-transparent border-none text-[11px] font-bold uppercase tracking-[0.2em] outline-none cursor-pointer text-muted hover:text-text transition-colors"
-                        >
-                          <option value="all">All Categories</option>
-                          {categories.map(cat => (
-                            <option key={cat.id} value={cat.id} className="bg-[#121214]">{cat.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <button 
-                        onClick={addMatch}
-                        className="bg-maple hover:bg-maple/90 text-bg py-5 px-10 rounded-2xl font-ui text-[11px] font-bold uppercase tracking-[0.2em] transition-all shadow-xl shadow-maple/20 flex items-center gap-3 group active:scale-95"
+                    <div className="flex items-center gap-2 bg-white/5 p-1 border border-white/5 rounded-2xl overflow-x-auto no-scrollbar max-w-full">
+                      <button
+                        onClick={() => setCategoryFilter('all')}
+                        className={cn(
+                          "px-6 py-3 font-ui text-[10px] font-bold uppercase tracking-widest transition-all rounded-xl whitespace-nowrap",
+                          categoryFilter === 'all' ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
+                        )}
                       >
-                        <Plus size={20} className="group-hover:rotate-90 transition-transform" />
-                        Create Match
+                        All Categories
                       </button>
+                      {categories.map(cat => (
+                        <button
+                          key={cat.id}
+                          onClick={() => setCategoryFilter(cat.id)}
+                          className={cn(
+                            "px-6 py-3 font-ui text-[10px] font-bold uppercase tracking-widest transition-all rounded-xl whitespace-nowrap",
+                            categoryFilter === cat.id ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
+                          )}
+                        >
+                          {cat.name}
+                        </button>
+                      ))}
+                    </div>
+                      {/* Removed Create Match button as requested */}
                     </div>
                   </div>
 
@@ -767,33 +1430,16 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                             </div>
                             <div>
                               <h3 className="text-3xl font-display uppercase tracking-tighter text-white">{cat.name}</h3>
-                              <p className="font-ui text-[10px] font-bold text-muted uppercase tracking-[0.4em] mt-2">
+                              <p className="font-sans text-[10px] font-bold text-muted uppercase tracking-[0.4em] mt-2">
                                 {catMatches.length} Active Records
                               </p>
                             </div>
                             <button 
-                              onClick={async () => {
-                                if (!supabase || !(await checkSession())) return;
-                                setLoading(true);
-                                const { error } = await supabase.from('matches').insert([{
-                                  category_id: cat.id,
-                                  match_no: matches.filter(m => m.category_id === cat.id).length + 1,
-                                  team1_id: houses[0]?.id,
-                                  team2_id: houses[1]?.id,
-                                  status: 'upcoming',
-                                  score1: 0,
-                                  score2: 0
-                                }]);
-                                if (error) handleSupabaseError(error, 'Failed to add match');
-                                else {
-                                  refresh();
-                                  setLoading(false);
-                                }
-                              }}
-                              className="ml-auto w-12 h-12 bg-white/5 hover:bg-maple/20 text-muted hover:text-maple rounded-2xl transition-all border border-white/5 flex items-center justify-center active:scale-90"
-                              title={`Add Match to ${cat.name}`}
+                              onClick={() => addMatch(cat.id)}
+                              className="ml-auto bg-maple/10 hover:bg-maple/20 text-maple py-3 px-6 rounded-xl font-ui text-[10px] font-bold uppercase tracking-[0.2em] transition-all border border-maple/20 flex items-center gap-2 active:scale-95"
                             >
-                              <Plus size={24} />
+                              <Plus size={16} />
+                              Add Match
                             </button>
                           </div>
 
@@ -851,6 +1497,16 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                                                 placeholder="Eligible Years"
                                                 className="w-full bg-white/5 border border-white/5 rounded-xl pl-9 pr-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted outline-none focus:border-maple/50 focus:text-text transition-all"
                                                 onBlur={(e) => updateMatch(match.id, { eligible_years: e.target.value })}
+                                              />
+                                            </div>
+                                            <div className="relative">
+                                              <Trophy className="absolute left-3 top-1/2 -translate-y-1/2 text-muted/30" size={12} />
+                                              <input
+                                                type="text"
+                                                defaultValue={match.man_of_the_match || ''}
+                                                placeholder="Man of the Match"
+                                                className="w-full bg-white/5 border border-white/5 rounded-xl pl-9 pr-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted outline-none focus:border-maple/50 focus:text-text transition-all"
+                                                onBlur={(e) => updateMatch(match.id, { man_of_the_match: e.target.value })}
                                               />
                                             </div>
                                           </div>
@@ -1089,190 +1745,15 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                 </motion.div>
               )}
 
-              {activeTab === 'houses' && (
-                <motion.div
-                  key="houses"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="space-y-12 pb-20"
-                >
-                  <div className="flex items-center justify-between bg-[#0d1b33] p-10 rounded-[3rem] border border-white/5 shadow-2xl">
-                    <div>
-                      <h2 className="text-4xl font-display uppercase tracking-tighter text-white">House Management</h2>
-                      <div className="flex items-center gap-6 mt-3">
-                        <p className="text-muted text-[10px] font-bold uppercase tracking-[0.3em] opacity-60">Maple (Snake) • Ebony (Bull) • Cedar (Panther) • Oak (Cheetah)</p>
-                        <button 
-                          onClick={() => {
-                            setConfirmModal({
-                              isOpen: true,
-                              title: 'Recompute All Points',
-                              message: 'This will recalculate all house points based on current match results. Continue?',
-                              onConfirm: async () => {
-                                if (supabase) {
-                                  await supabase.rpc('recompute_points');
-                                  refresh();
-                                  setConfirmModal(prev => ({ ...prev, isOpen: false }));
-                                  setSuccess('Points recomputed successfully');
-                                  setTimeout(() => setSuccess(null), 3000);
-                                }
-                              }
-                            });
-                          }}
-                          className="flex items-center gap-2 text-[10px] font-bold text-maple uppercase tracking-[0.3em] hover:text-white transition-all group active:scale-95"
-                        >
-                          <RefreshCw size={14} className="group-hover:rotate-180 transition-transform duration-500" />
-                          Recompute Points
-                        </button>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={addHouse}
-                      className="bg-maple hover:bg-maple/90 text-bg py-5 px-12 rounded-2xl font-ui text-[11px] font-bold uppercase tracking-[0.2em] transition-all shadow-xl shadow-maple/20 flex items-center gap-3 group active:scale-95"
-                    >
-                      <Plus size={20} className="group-hover:rotate-90 transition-transform" />
-                      Add House
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
-                    {houses.map((house) => (
-                      <motion.div 
-                        key={house.id}
-                        layout
-                        className="bg-[#0d1b33] border border-white/5 rounded-[3rem] overflow-hidden group hover:border-maple/30 transition-all shadow-2xl flex flex-col relative"
-                      >
-                        {/* House Color Accent */}
-                        <div className="absolute top-0 left-0 w-full h-2" style={{ backgroundColor: house.color || '#ffffff' }} />
-                        
-                        <div className="p-10 flex items-center gap-10">
-                          {/* Logo Area */}
-                          <div className="relative group/logo cursor-pointer" onClick={() => document.getElementById(`house-logo-${house.id}`)?.click()}>
-                            <input 
-                              type="file"
-                              id={`house-logo-${house.id}`}
-                              className="hidden"
-                              accept="image/*"
-                              onChange={async (e) => {
-                                const file = e.target.files?.[0];
-                                if (!file || !supabase) return;
-                                setLoading(true);
-                                try {
-                                  const fileName = `house_${house.id}_logo_${Date.now()}`;
-                                  const { error: uploadError } = await supabase.storage.from('ucsf-media').upload(fileName, file);
-                                  if (uploadError) throw uploadError;
-                                  const { data: { publicUrl } } = supabase.storage.from('ucsf-media').getPublicUrl(fileName);
-                                  await updateHouse(house.id, { logo_url: publicUrl });
-                                } catch (err: any) {
-                                  handleSupabaseError(err, 'Logo upload failed');
-                                } finally {
-                                  setLoading(false);
-                                }
-                              }}
-                            />
-                            <div className="w-36 h-36 bg-white/5 rounded-[2rem] flex items-center justify-center border border-white/5 overflow-hidden group-hover/logo:border-maple/50 transition-all shadow-inner relative">
-                              {house.logo_url ? (
-                                <img src={house.logo_url} alt={house.name} className="w-full h-full object-contain p-6" referrerPolicy="no-referrer" />
-                              ) : (
-                                <img src={`https://api.dicebear.com/7.x/shapes/svg?seed=${house.name}`} alt={house.name} className="w-full h-full object-contain p-6 opacity-30 grayscale" referrerPolicy="no-referrer" />
-                              )}
-                              <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/logo:opacity-100 flex flex-col items-center justify-center transition-opacity gap-2">
-                                <Upload size={24} className="text-white" />
-                                <span className="text-[8px] font-bold uppercase tracking-widest text-white">Update Logo</span>
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Info Area */}
-                          <div className="flex-1 space-y-6">
-                            <div className="flex items-center justify-between">
-                              <input
-                                type="text"
-                                defaultValue={house.name}
-                                className="bg-transparent border-none text-4xl font-display uppercase tracking-tighter text-white outline-none focus:text-maple transition-colors w-full"
-                                onBlur={(e) => updateHouse(house.id, { name: e.target.value })}
-                              />
-                              <button 
-                                onClick={() => deleteHouse(house.id)}
-                                className="w-12 h-12 bg-danger/5 hover:bg-danger text-danger hover:text-white rounded-2xl transition-all border border-danger/10 flex items-center justify-center active:scale-90 opacity-0 group-hover:opacity-100"
-                              >
-                                <Trash2 size={20} />
-                              </button>
-                            </div>
-
-                            <div className="flex flex-wrap items-center gap-6">
-                              <div className="flex items-center gap-4 bg-white/5 px-6 py-3 rounded-2xl border border-white/5 shadow-inner">
-                                <Trophy size={20} className="text-maple" />
-                                <input
-                                  type="number"
-                                  defaultValue={house.points}
-                                  className="w-20 bg-transparent border-none text-2xl font-display text-white outline-none focus:text-maple transition-colors"
-                                  onBlur={(e) => updateHouse(house.id, { points: parseInt(e.target.value) })}
-                                />
-                                <span className="font-ui text-[10px] font-bold text-muted uppercase tracking-[0.2em]">Points</span>
-                              </div>
-                              <div className="flex items-center gap-4 bg-white/5 px-6 py-3 rounded-2xl border border-white/5 shadow-inner">
-                                <div className="w-6 h-6 rounded-full border-2 border-white/10 shadow-lg" style={{ backgroundColor: house.color || '#ffffff' }} />
-                                <input
-                                  type="text"
-                                  defaultValue={house.color || '#ffffff'}
-                                  className="w-24 bg-transparent border-none text-[12px] font-mono text-muted outline-none focus:text-white transition-colors"
-                                  onBlur={(e) => updateHouse(house.id, { color: e.target.value })}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Mascot & Rank */}
-                        <div className="px-10 pb-10 grid grid-cols-2 gap-8">
-                          <div className="space-y-3">
-                            <label className="font-ui text-[10px] font-bold text-muted uppercase tracking-[0.3em] ml-1">Mascot & Identity</label>
-                            <div className="flex gap-4">
-                              <input
-                                type="text"
-                                defaultValue={house.mascot || ''}
-                                placeholder="🐍"
-                                className="w-16 h-16 bg-white/5 border border-white/5 rounded-2xl text-center text-3xl outline-none focus:border-maple/50 transition-all shadow-inner"
-                                onBlur={(e) => updateHouse(house.id, { mascot: e.target.value })}
-                              />
-                              <input
-                                type="text"
-                                defaultValue={house.mascot_name || ''}
-                                placeholder="The Viper"
-                                className="flex-1 bg-white/5 border border-white/5 rounded-2xl px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-muted outline-none focus:border-maple/50 focus:text-text transition-all shadow-inner"
-                                onBlur={(e) => updateHouse(house.id, { mascot_name: e.target.value })}
-                              />
-                            </div>
-                          </div>
-                          <div className="space-y-3">
-                            <label className="font-ui text-[10px] font-bold text-muted uppercase tracking-[0.3em] ml-1">Ranking Position</label>
-                            <div className="relative group/input">
-                              <Activity className="absolute left-5 top-1/2 -translate-y-1/2 text-muted/30 group-focus-within/input:text-maple transition-colors" size={18} />
-                              <input
-                                type="number"
-                                defaultValue={house.rank_pos}
-                                className="w-full bg-white/5 border border-white/5 rounded-2xl pl-14 pr-6 py-5 text-sm font-bold text-white outline-none focus:border-maple/50 transition-all shadow-inner"
-                                onBlur={(e) => updateHouse(house.id, { rank_pos: parseInt(e.target.value) })}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-
               {activeTab === 'categories' && (
                 <motion.div
                   key="categories"
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  className="space-y-12 pb-20"
+                  className="space-y-16 pb-20"
                 >
-                  <div className="flex items-center justify-between bg-[#0d1b33] p-10 rounded-[3rem] border border-white/5 shadow-2xl">
+                  <div className="flex items-center justify-between bg-bg2 p-10 rounded-[3rem] border border-white/5 shadow-2xl">
                     <div>
                       <h2 className="text-4xl font-display uppercase tracking-tighter text-white">Event Categories</h2>
                       <p className="text-muted text-[10px] font-bold uppercase tracking-[0.3em] mt-3 opacity-60">Define sports and cultural event specifications</p>
@@ -1286,222 +1767,212 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
-                    {categories.map((cat) => (
-                      <motion.div 
-                        key={cat.id}
-                        layout
-                        className="bg-[#0d1b33] border border-white/5 rounded-[3rem] p-10 group hover:border-maple/30 transition-all shadow-2xl space-y-8 relative overflow-hidden"
+                  {/* Sports Section */}
+                  <div className="space-y-10">
+                    <div className="flex items-center gap-6 px-6">
+                      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+                      <h3 className="font-display text-2xl uppercase tracking-[0.3em] text-maple">Sports Categories</h3>
+                      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
+                      {categories.filter(c => c.category_type === 'sport' || !c.category_type).map((cat) => (
+                        <div key={cat.id}>
+                          <CategoryCard cat={cat} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Cultural Section */}
+                  <div className="space-y-10">
+                    <div className="flex items-center gap-6 px-6">
+                      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+                      <h3 className="font-display text-2xl uppercase tracking-[0.3em] text-maple">Cultural Categories</h3>
+                      <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
+                      {categories.filter(c => c.category_type === 'cultural').map((cat) => (
+                        <div key={cat.id}>
+                          <CategoryCard cat={cat} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {activeTab === 'gallery' && (
+                <motion.div
+                  key="gallery"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="space-y-12 pb-20"
+                >
+                  <div className="flex items-center justify-between bg-[#0d1b33] p-10 rounded-[3rem] border border-white/5 shadow-2xl">
+                    <div>
+                      <h2 className="text-4xl font-display uppercase tracking-tighter text-white">Media Gallery</h2>
+                      <p className="text-muted text-[10px] font-bold uppercase tracking-[0.3em] mt-3 opacity-60">Manage photos and videos for the gallery</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <input 
+                        type="file" 
+                        id="gallery-multi-upload" 
+                        multiple 
+                        accept="image/*,video/*" 
+                        className="hidden" 
+                        onChange={(e) => e.target.files && addGalleryItems(e.target.files)}
+                      />
+                      <button 
+                        onClick={() => document.getElementById('gallery-multi-upload')?.click()}
+                        disabled={loading}
+                        className="bg-maple hover:bg-maple/90 text-bg py-5 px-12 rounded-2xl font-ui text-[11px] font-bold uppercase tracking-[0.2em] transition-all shadow-xl shadow-maple/20 flex items-center gap-3 group active:scale-95 disabled:opacity-50"
                       >
-                        <div className="flex items-start justify-between gap-8">
-                          <div className="relative group/icon w-24 h-24 bg-white/5 rounded-[2rem] flex items-center justify-center text-5xl border border-white/5 group-hover:border-maple/50 transition-all overflow-hidden shadow-inner">
-                            <span className="relative z-10">{cat.icon || <Layers size={32} className="text-muted/30" />}</span>
-                            <input
-                              type="text"
-                              defaultValue={cat.icon || ''}
-                              placeholder="Emoji"
-                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
-                              onBlur={(e) => updateCategory(cat.id, { icon: e.target.value })}
-                            />
-                            <div className="absolute inset-0 bg-maple/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                              <span className="text-[8px] font-bold uppercase tracking-widest text-maple mt-14">Edit Icon</span>
-                            </div>
-                          </div>
-                          <div className="flex-1 space-y-5">
-                            <div className="flex items-center justify-between">
-                              <input
-                                type="text"
-                                defaultValue={cat.name}
-                                className="w-full bg-transparent border-none text-3xl font-display uppercase tracking-tighter text-white outline-none focus:text-maple transition-colors"
-                                onBlur={(e) => updateCategory(cat.id, { name: e.target.value })}
-                              />
-                              <button 
-                                onClick={() => deleteCategory(cat.id)}
-                                className="w-10 h-10 bg-danger/5 hover:bg-danger text-danger hover:text-white rounded-xl transition-all border border-danger/10 flex items-center justify-center active:scale-90 opacity-0 group-hover:opacity-100"
-                              >
-                                <Trash2 size={18} />
-                              </button>
-                            </div>
-                            <div className="flex items-center gap-4">
-                              <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-xl border border-white/5 shadow-inner">
-                                <span className="font-ui text-[9px] font-bold text-muted uppercase tracking-[0.2em]">Order</span>
-                                <input
-                                  type="number"
-                                  defaultValue={cat.sort_order}
-                                  className="w-10 bg-transparent border-none text-white text-[11px] font-bold text-center outline-none focus:text-maple"
-                                  onBlur={(e) => updateCategory(cat.id, { sort_order: parseInt(e.target.value) })}
-                                />
-                              </div>
-                              <select
-                                value={cat.category_type || 'sport'}
-                                onChange={(e) => updateCategory(cat.id, { category_type: e.target.value as any })}
-                                className="bg-white/5 border border-white/5 rounded-xl px-4 py-2 font-ui text-[9px] font-bold uppercase tracking-[0.2em] text-maple outline-none hover:bg-white/10 transition-colors cursor-pointer shadow-inner"
-                              >
-                                <option value="sport" className="bg-[#0d1b33]">Sport</option>
-                                <option value="cultural" className="bg-[#0d1b33]">Cultural</option>
-                              </select>
-                            </div>
-                          </div>
-                        </div>
+                        <Upload size={20} className="group-hover:-translate-y-1 transition-transform" />
+                        {loading ? 'Uploading...' : 'Mass Upload'}
+                      </button>
+                    </div>
+                  </div>
 
-                        <div className="grid grid-cols-2 gap-6 pt-8 border-t border-white/5">
-                          {[
-                            { label: 'Gender', key: 'gender', placeholder: 'Boys/Girls' },
-                            { label: 'Team Size', key: 'team_size', placeholder: '11 Players' },
-                            { label: 'On Field', key: 'on_field', placeholder: '7 Players' },
-                            { label: 'Duration', key: 'duration', placeholder: '20 mins' },
-                            { label: 'Deadline', key: 'deadline', placeholder: 'Oct 15th' },
-                            { label: 'Format', key: 'submission_format', placeholder: 'PDF/Link' }
-                          ].map((field) => (
-                            <div key={field.key} className="space-y-2">
-                              <label className="font-ui text-[9px] font-bold text-muted uppercase tracking-[0.3em] ml-1">{field.label}</label>
-                              <input
-                                type="text"
-                                defaultValue={cat[field.key as keyof typeof cat] || ''}
-                                placeholder={field.placeholder}
-                                className="w-full bg-white/5 border border-white/5 rounded-2xl px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-muted outline-none focus:border-maple/50 focus:text-text transition-all shadow-inner"
-                                onBlur={(e) => updateCategory(cat.id, { [field.key]: e.target.value })}
-                              />
-                            </div>
-                          ))}
-                          <div className="space-y-3 col-span-2 mt-4">
-                            <label className="font-ui text-[9px] font-bold text-muted uppercase tracking-[0.3em] ml-1">Category Visual</label>
-                            <div className="flex gap-6">
-                              <div className="w-24 h-24 bg-white/5 rounded-[2rem] border border-white/5 overflow-hidden flex-shrink-0 shadow-inner group/img relative">
-                                {cat.image_url ? (
-                                  <img src={cat.image_url} alt={cat.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                                ) : (
-                                  <div className="w-full h-full flex items-center justify-center text-muted/20">
-                                    <ImageIcon size={32} />
-                                  </div>
-                                )}
-                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/img:opacity-100 flex items-center justify-center transition-opacity cursor-pointer" onClick={() => document.getElementById(`cat-upload-${cat.id}`)?.click()}>
-                                  <Upload size={20} className="text-white" />
-                                </div>
-                              </div>
-                              <div className="flex-grow space-y-3">
-                                <input
-                                  type="text"
-                                  defaultValue={cat.image_url || ''}
-                                  placeholder="External Image URL"
-                                  className="w-full bg-white/5 border border-white/5 rounded-2xl px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-muted outline-none focus:border-maple/50 focus:text-text transition-all shadow-inner"
-                                  onBlur={(e) => updateCategory(cat.id, { image_url: e.target.value })}
-                                />
-                                <div className="flex items-center gap-3">
-                                  <button 
-                                    onClick={() => document.getElementById(`cat-upload-${cat.id}`)?.click()}
-                                    className="flex-1 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-ui text-[9px] font-bold uppercase tracking-[0.2em] text-muted transition-all active:scale-95 shadow-lg"
-                                  >
-                                    Upload
-                                  </button>
-                                  <input 
-                                    type="file" 
-                                    id={`cat-upload-${cat.id}`}
-                                    className="hidden" 
-                                    accept="image/*"
-                                    onChange={async (e) => {
-                                      const file = e.target.files?.[0];
-                                      if (file && supabase) {
-                                        setLoading(true);
-                                        try {
-                                          const fileName = `category-${cat.id}-${Date.now()}.${file.name.split('.').pop()}`;
-                                          const { data, error } = await supabase.storage.from('ucsf-media').upload(fileName, file);
-                                          if (error) throw error;
-                                          if (data) {
-                                            const { data: { publicUrl } } = supabase.storage.from('ucsf-media').getPublicUrl(fileName);
-                                            updateCategory(cat.id, { image_url: publicUrl });
-                                          }
-                                        } catch (err: any) {
-                                          handleSupabaseError(err, 'Image upload failed');
-                                        } finally {
-                                          setLoading(false);
-                                        }
-                                      }
-                                    }}
-                                  />
-                                  {cat.image_url && (
-                                    <button 
-                                      onClick={() => updateCategory(cat.id, { image_url: null })}
-                                      className="px-6 py-3 bg-danger/10 hover:bg-danger text-danger hover:text-white border border-danger/20 rounded-xl font-ui text-[9px] font-bold uppercase tracking-[0.2em] transition-all active:scale-95 shadow-lg"
-                                    >
-                                      Clear
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <label className="font-ui text-[9px] font-bold text-muted uppercase tracking-widest">Submission Format</label>
-                            <input
-                              type="text"
-                              defaultValue={cat.submission_format || ''}
-                              placeholder="e.g. MP4/PDF"
-                              className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted outline-none focus:border-maple/50 focus:text-text transition-all"
-                              onBlur={(e) => updateCategory(cat.id, { submission_format: e.target.value })}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="font-ui text-[9px] font-bold text-muted uppercase tracking-widest">Special Rules / Description</label>
-                          <textarea
-                            defaultValue={cat.special_rules || ''}
-                            placeholder="Enter rules, guidelines, or event description..."
-                            className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted outline-none focus:border-maple/50 focus:text-text transition-all min-h-[100px]"
-                            onBlur={(e) => updateCategory(cat.id, { special_rules: e.target.value })}
-                          />
-                        </div>
-
-                        <div className="space-y-4">
-                          <label className="font-ui text-[9px] font-bold text-muted uppercase tracking-widest">Judging Criteria</label>
-                          <div className="space-y-2">
-                            {(cat.judging_criteria || []).map((item, i) => (
-                              <div key={i} className="flex gap-2">
-                                <input
-                                  type="text"
-                                  value={item.criterion}
-                                  onChange={(e) => {
-                                    const newCriteria = [...(cat.judging_criteria || [])];
-                                    newCriteria[i].criterion = e.target.value;
-                                    updateCategory(cat.id, { judging_criteria: newCriteria });
-                                  }}
-                                  className="flex-1 bg-white/5 border border-white/5 rounded-lg px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-muted outline-none focus:border-maple/50"
-                                />
-                                <input
-                                  type="text"
-                                  value={item.weight}
-                                  onChange={(e) => {
-                                    const newCriteria = [...(cat.judging_criteria || [])];
-                                    newCriteria[i].weight = e.target.value;
-                                    updateCategory(cat.id, { judging_criteria: newCriteria });
-                                  }}
-                                  className="w-20 bg-white/5 border border-white/5 rounded-lg px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-muted outline-none focus:border-maple/50"
-                                />
-                                <button 
-                                  onClick={() => {
-                                    const newCriteria = (cat.judging_criteria || []).filter((_, idx) => idx !== i);
-                                    updateCategory(cat.id, { judging_criteria: newCriteria });
-                                  }}
-                                  className="p-2 text-danger hover:bg-danger/10 rounded-lg"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </div>
-                            ))}
-                            <button 
-                              onClick={() => {
-                                const newCriteria = [...(cat.judging_criteria || []), { criterion: 'New Criterion', weight: '20%' }];
-                                updateCategory(cat.id, { judging_criteria: newCriteria });
-                              }}
-                              className="w-full py-2 bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg font-ui text-[8px] font-bold uppercase tracking-widest text-muted"
-                            >
-                              + Add Criterion
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
+                    {gallery.map((item) => (
+                      <motion.div 
+                        key={item.id}
+                        layout
+                        className="bg-[#0d1b33] border border-white/5 rounded-[3rem] overflow-hidden group hover:border-maple/30 transition-all shadow-2xl"
+                      >
+                        <div className="aspect-video relative overflow-hidden">
+                          <img src={item.url} alt={item.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-4">
+                            <button onClick={() => deleteGalleryItem(item.id)} className="w-12 h-12 bg-danger/20 hover:bg-danger text-danger hover:text-white rounded-2xl transition-all flex items-center justify-center">
+                              <Trash2 size={20} />
                             </button>
+                          </div>
+                        </div>
+                        <div className="p-8 space-y-4">
+                          <input
+                            type="text"
+                            defaultValue={item.title}
+                            className="w-full bg-transparent border-none text-xl font-display uppercase tracking-widest text-white outline-none focus:text-maple"
+                            onBlur={async (e) => {
+                              if (!supabase) return;
+                              await supabase.from('gallery').update({ title: e.target.value }).eq('id', item.id);
+                              refresh();
+                            }}
+                          />
+                          <div className="flex items-center gap-4">
+                            <select
+                              value={item.type}
+                              onChange={async (e) => {
+                                if (!supabase) return;
+                                await supabase.from('gallery').update({ type: e.target.value }).eq('id', item.id);
+                                refresh();
+                              }}
+                              className="bg-white/5 border border-white/5 rounded-xl px-4 py-2 font-ui text-[9px] font-bold uppercase tracking-[0.2em] text-muted outline-none"
+                            >
+                              <option value="image" className="bg-[#0d1b33]">Image</option>
+                              <option value="video" className="bg-[#0d1b33]">Video</option>
+                            </select>
+                            <input
+                              type="text"
+                              defaultValue={item.year}
+                              className="w-20 bg-white/5 border border-white/5 rounded-xl px-4 py-2 font-ui text-[9px] font-bold uppercase tracking-[0.2em] text-muted outline-none"
+                              onBlur={async (e) => {
+                                if (!supabase) return;
+                                await supabase.from('gallery').update({ year: e.target.value }).eq('id', item.id);
+                                refresh();
+                              }}
+                            />
                           </div>
                         </div>
                       </motion.div>
                     ))}
+                  </div>
+                </motion.div>
+              )}
+
+              {activeTab === 'leaderboards' && (
+                <motion.div
+                  key="leaderboards"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="space-y-12 pb-20"
+                >
+                  <div className="flex items-center justify-between bg-[#0d1b33] p-10 rounded-[3rem] border border-white/5 shadow-2xl">
+                    <div>
+                      <h2 className="text-4xl font-display uppercase tracking-tighter text-white">House Leaderboards</h2>
+                      <p className="text-muted text-[10px] font-bold uppercase tracking-[0.3em] mt-3 opacity-60">Real-time house standings and point distribution</p>
+                    </div>
+                    <button 
+                      onClick={() => supabase?.rpc('recompute_points').then(() => refresh())}
+                      className="bg-maple hover:bg-maple/90 text-bg py-5 px-12 rounded-2xl font-ui text-[11px] font-bold uppercase tracking-[0.2em] transition-all shadow-xl shadow-maple/20 flex items-center gap-3 group active:scale-95"
+                    >
+                      <RefreshCw size={20} className="group-hover:rotate-180 transition-transform duration-500" />
+                      Recompute Points
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-6">
+                    {houses.sort((a, b) => (b.points || 0) - (a.points || 0)).map((house, idx) => (
+                      <div key={house.id} className="bg-[#0d1b33] border border-white/5 rounded-[2.5rem] p-8 flex items-center gap-10 group hover:border-maple/30 transition-all shadow-2xl">
+                        <div className="w-20 h-20 bg-white/5 rounded-[1.5rem] flex items-center justify-center font-display text-4xl text-maple border border-white/5 shadow-inner">
+                          #{idx + 1}
+                        </div>
+                        <div className="w-20 h-20 rounded-[1.5rem] overflow-hidden border border-white/5 shadow-inner">
+                          <img src={house.logo_url} alt={house.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-3xl font-display uppercase tracking-widest text-white">{house.name}</h3>
+                          <p className="font-ui text-[10px] font-bold text-muted uppercase tracking-[0.4em] mt-2">{house.motto || 'Striving for Excellence'}</p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-5xl font-display text-maple tracking-tighter">{house.points || 0}</div>
+                          <div className="font-ui text-[10px] font-bold text-muted uppercase tracking-[0.3em] mt-1">Total Points</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
+              {activeTab === 'spreadsheet' && (
+                <motion.div
+                  key="spreadsheet"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="h-[calc(100vh-200px)] flex flex-col gap-8"
+                >
+                  <div className="flex items-center justify-between bg-[#0d1b33] p-10 rounded-[3rem] border border-white/5 shadow-2xl">
+                    <div>
+                      <h2 className="text-4xl font-display uppercase tracking-tighter text-white">Data Spreadsheet</h2>
+                      <p className="text-muted text-[10px] font-bold uppercase tracking-[0.3em] mt-3 opacity-60">Embedded Google Sheet for detailed management</p>
+                    </div>
+                    <a 
+                      href={localSettings['spreadsheet_url'] || '#'} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="bg-white/5 hover:bg-white/10 text-white py-5 px-12 rounded-2xl font-ui text-[11px] font-bold uppercase tracking-[0.2em] transition-all border border-white/10 flex items-center gap-3 group active:scale-95"
+                    >
+                      <ExternalLink size={20} />
+                      Open Full Sheet
+                    </a>
+                  </div>
+                  
+                  <div className="flex-1 bg-[#0d1b33] border border-white/5 rounded-[3rem] overflow-hidden shadow-2xl relative">
+                    {localSettings['spreadsheet_url'] ? (
+                      <iframe 
+                        src={getEmbedUrl(localSettings['spreadsheet_url'])} 
+                        className="w-full h-full border-none"
+                        title="Spreadsheet"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-muted gap-4">
+                        <FileText size={64} className="opacity-10" />
+                        <p className="font-ui text-xs font-bold uppercase tracking-widest">No spreadsheet URL configured in settings</p>
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               )}
@@ -1721,10 +2192,10 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                           <label className="font-ui text-[10px] font-bold text-muted uppercase tracking-[0.3em] ml-1">Master Spreadsheet URL</label>
                           <input
                             type="text"
-                            value={localSettings['master_spreadsheet_url'] || ''}
+                            value={localSettings['spreadsheet_url'] || ''}
                             className="w-full bg-white/5 border border-white/5 rounded-2xl px-8 py-5 text-[13px] font-bold text-white outline-none focus:border-maple/50 transition-all shadow-inner"
                             placeholder="https://docs.google.com/spreadsheets/..."
-                            onChange={(e) => handleSettingChange('master_spreadsheet_url', e.target.value)}
+                            onChange={(e) => handleSettingChange('spreadsheet_url', e.target.value)}
                           />
                         </div>
                       </div>
@@ -1822,6 +2293,80 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                         </div>
                       ))}
                     </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {activeTab === 'changes' && profile?.is_super_admin && (
+                <motion.div
+                  key="changes"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="space-y-12"
+                >
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <h2 className="text-5xl font-display uppercase tracking-tighter text-white">Pending Approvals</h2>
+                      <p className="text-muted mt-2 font-sans text-[10px] font-bold uppercase tracking-[0.3em]">Review and confirm changes submitted by other admins</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-6">
+                    {stagedChanges.filter(c => c.status === 'pending').length === 0 ? (
+                      <div className="bg-bg2 border border-white/5 rounded-[3rem] p-20 flex flex-col items-center justify-center text-center space-y-6">
+                        <div className="w-24 h-24 bg-white/5 rounded-[2rem] flex items-center justify-center text-muted/20">
+                          <CheckCircle size={48} />
+                        </div>
+                        <div className="space-y-2">
+                          <h3 className="text-2xl font-display uppercase tracking-tighter text-white">All Caught Up!</h3>
+                          <p className="text-muted text-[10px] font-bold uppercase tracking-widest">No pending changes require your approval.</p>
+                        </div>
+                      </div>
+                    ) : (
+                      stagedChanges.filter(c => c.status === 'pending').map((change) => (
+                        <div key={change.id} className="bg-bg2 border border-white/5 rounded-[2rem] p-8 flex flex-col md:flex-row gap-8 items-start md:items-center group hover:border-maple/30 transition-all">
+                          <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-maple flex-shrink-0">
+                            <History size={24} />
+                          </div>
+                          
+                          <div className="flex-1 space-y-2">
+                            <div className="flex items-center gap-3">
+                              <span className="px-3 py-1 bg-maple/10 text-maple text-[8px] font-bold uppercase tracking-widest rounded-lg border border-maple/20">
+                                {change.table_name}
+                              </span>
+                              <span className="text-muted text-[10px] font-bold uppercase tracking-widest">
+                                ID: {change.record_id}
+                              </span>
+                            </div>
+                            <h4 className="text-lg font-display uppercase text-white">
+                              Change by <span className="text-maple">{change.created_by_email}</span>
+                            </h4>
+                            <div className="bg-black/20 p-4 rounded-xl font-mono text-[10px] text-muted/80 overflow-x-auto">
+                              <pre>{JSON.stringify(change.updates, null, 2)}</pre>
+                            </div>
+                            <p className="text-[9px] text-muted/40 font-bold uppercase tracking-widest">
+                              Submitted {new Date(change.created_at).toLocaleString()}
+                            </p>
+                          </div>
+
+                          <div className="flex gap-3 w-full md:w-auto">
+                            <button 
+                              onClick={() => approveChange(change)}
+                              className="flex-1 md:flex-none px-6 py-4 bg-success/10 hover:bg-success text-success hover:text-bg font-ui text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all border border-success/20 flex items-center justify-center gap-2"
+                            >
+                              <CheckCircle size={14} /> Approve
+                            </button>
+                            <button 
+                              onClick={() => discardStagedChange(change.id)}
+                              className="flex-1 md:flex-none px-6 py-4 bg-danger/10 hover:bg-danger text-danger hover:text-white font-ui text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all border border-danger/20 flex items-center justify-center gap-2"
+                            >
+                              <X size={14} /> Discard
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </motion.div>
               )}

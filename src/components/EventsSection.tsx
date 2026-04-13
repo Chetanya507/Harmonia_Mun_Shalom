@@ -44,11 +44,7 @@ export default function EventsSection({ categories, matches, setActiveTab }: Eve
       >
         <div className="flex items-start justify-between mb-6">
           <motion.div layoutId={`icon-${cat.id}`} className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center text-3xl group-hover:scale-110 transition-transform overflow-hidden">
-            {cat.image_url ? (
-              <img src={cat.image_url} alt={cat.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-            ) : (
-              cat.icon || '🏆'
-            )}
+            {cat.icon || '🏆'}
           </motion.div>
           <div className="text-right">
             <span className="font-ui text-[10px] font-bold uppercase tracking-widest text-muted block mb-1">
@@ -114,11 +110,7 @@ export default function EventsSection({ categories, matches, setActiveTab }: Eve
                   <div className="flex-1 space-y-12">
                     <div className="flex items-center gap-8">
                       <motion.div layoutId={`icon-${expandedId}`} className="w-24 h-24 bg-white/5 rounded-[32px] flex items-center justify-center text-6xl overflow-hidden">
-                        {expandedCategory.image_url ? (
-                          <img src={expandedCategory.image_url} alt={expandedCategory.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                        ) : (
-                          expandedCategory.icon || '🏆'
-                        )}
+                        {expandedCategory.icon || '🏆'}
                       </motion.div>
                       <div>
                         <span className="font-ui text-xs font-bold uppercase tracking-[0.3em] text-maple mb-2 block">
@@ -130,12 +122,10 @@ export default function EventsSection({ categories, matches, setActiveTab }: Eve
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
                       {[
                         { label: 'Team Size', val: expandedCategory.team_size },
-                        { label: 'On Field', val: expandedCategory.on_field },
                         { label: 'Duration', val: expandedCategory.duration },
-                        { label: 'Deadline', val: expandedCategory.deadline },
                       ].filter(s => s.val).map((stat, i) => (
                         <div key={i} className="space-y-2">
                           <p className="font-ui text-[10px] font-bold text-muted uppercase tracking-widest">{stat.label}</p>

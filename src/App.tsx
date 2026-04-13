@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import Layout from './components/Layout';
-import HouseCard from './components/HouseCard';
 import MatchCard from './components/MatchCard';
 import ScheduleCard from './components/ScheduleCard';
 import EventsSection from './components/EventsSection';
 import { useUCSFData } from './hooks/useUCSFData';
 import { Match } from './types';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trophy, Activity, Calendar, Shield, Loader2, AlertCircle, ChevronRight, Play, Image as ImageIcon, Video, ExternalLink, Bell, Info } from 'lucide-react';
+import { Trophy, Activity, Calendar, Shield, Loader2, AlertCircle, ChevronRight, Play, Image as ImageIcon, Video, ExternalLink, Bell, Info, FileText, Filter, ChevronDown, ChevronUp } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { cn } from './lib/utils';
 
 export default function App() {
@@ -16,8 +16,10 @@ export default function App() {
   const [selectedYear, setSelectedYear] = useState<string | null>(null);
   const [galleryYear, setGalleryYear] = useState<'all' | 2025 | 2026>('all');
   const [noticePriority, setNoticePriority] = useState<'all' | 'low' | 'medium' | 'high'>('all');
+  const [expandedNoticeId, setExpandedNoticeId] = useState<number | null>(null);
   const [selectedLeaderboardGrade, setSelectedLeaderboardGrade] = useState<'all' | '7-8th' | '9-10th' | '11th' | '12th'>('all');
-  const { houses, matches, schedule, settings, categories, gallery, notices, loading, error, refresh } = useUCSFData();
+  const [selectedLeaderboardEventId, setSelectedLeaderboardEventId] = useState<string | 'all'>('all');
+  const { houses, matches, schedule, settings, categories, gallery, notices, culturalResults, loading, error, refresh } = useUCSFData();
   const liveItems = React.useMemo(() => schedule.filter(s => s.status === 'live'), [schedule]);
   const upcomingItems = React.useMemo(() => schedule.filter(s => s.status === 'upcoming').slice(0, 3), [schedule]);
 
@@ -27,11 +29,11 @@ export default function App() {
       points[h.id] = { '7-8th': 0, '9-10th': 0, '11th': 0, '12th': 0, 'all': h.points };
     });
 
+    // Sports Points
     matches.filter(m => m.status === 'completed' && m.winner_id).forEach(m => {
       const winnerId = m.winner_id!;
       const grade = m.eligible_years;
       if (points[winnerId] && grade) {
-        // Find which category this grade belongs to
         let category = '';
         if (grade.includes('7') || grade.includes('8')) category = '7-8th';
         else if (grade.includes('9') || grade.includes('10')) category = '9-10th';
@@ -39,21 +41,52 @@ export default function App() {
         else if (grade.includes('12')) category = '12th';
 
         if (category) {
-          points[winnerId][category] += 10; // 10 points for a win
+          points[winnerId][category] += 10;
         }
       }
     });
 
-    return points;
-  }, [houses, matches]);
+    // Cultural Points
+    culturalResults.forEach(r => {
+      if (points[r.house_id]) {
+        // We don't have grade in cultural_results directly, but we can infer from category if needed
+        // For now, add to 'all'
+        points[r.house_id]['all'] += (r.points || 0);
+      }
+    });
 
-  const sortedHousesByGrade = React.useMemo(() => {
+    return points;
+  }, [houses, matches, culturalResults]);
+
+  const eventPoints = React.useMemo(() => {
+    if (selectedLeaderboardEventId === 'all') return null;
+    
+    const points: Record<string, number> = {};
+    houses.forEach(h => points[h.id] = 0);
+
+    // Sports
+    matches.filter(m => m.category_id === selectedLeaderboardEventId && m.status === 'completed' && m.winner_id).forEach(m => {
+      points[m.winner_id!] += 10;
+    });
+
+    // Cultural
+    culturalResults.filter(r => r.category_id === selectedLeaderboardEventId).forEach(r => {
+      points[r.house_id] += (r.points || 0);
+    });
+
+    return points;
+  }, [houses, matches, culturalResults, selectedLeaderboardEventId]);
+
+  const sortedHousesForLeaderboard = React.useMemo(() => {
     return [...houses].sort((a, b) => {
+      if (selectedLeaderboardEventId !== 'all' && eventPoints) {
+        return (eventPoints[b.id] || 0) - (eventPoints[a.id] || 0);
+      }
       const pointsA = gradePoints[a.id]?.[selectedLeaderboardGrade] || 0;
       const pointsB = gradePoints[b.id]?.[selectedLeaderboardGrade] || 0;
       return pointsB - pointsA;
     });
-  }, [houses, gradePoints, selectedLeaderboardGrade]);
+  }, [houses, gradePoints, eventPoints, selectedLeaderboardGrade, selectedLeaderboardEventId]);
 
   const handleTabChange = (tab: string) => {
     if (tab !== 'matches') {
@@ -110,6 +143,19 @@ export default function App() {
   const announcementText = settings['announcement_text'];
   const footerText = settings['footer_text'];
   const schoolLogoUrl = settings['school_logo_url'];
+
+  const getEmbedUrl = (url: string) => {
+    if (!url) return '';
+    if (url.includes('docs.google.com/spreadsheets')) {
+      if (url.includes('/edit')) {
+        return url.split('/edit')[0] + '/preview';
+      }
+      if (!url.includes('/preview') && !url.includes('/pubhtml')) {
+        return url + (url.includes('?') ? '&' : '?') + 'rm=minimal';
+      }
+    }
+    return url;
+  };
 
   const renderContent = () => {
     switch (activeTab) {
@@ -275,30 +321,32 @@ export default function App() {
                   <p className="text-muted max-w-xl">The arena where strength meets strategy. Dynamic categories from the field.</p>
                 </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                   {categories.filter(c => c.category_type === 'sport').map((sport, i) => (
                     <motion.div 
                       key={sport.id}
                       whileHover={{ y: -10 }}
-                      className="card-glass overflow-hidden group"
+                      className="card-glass overflow-hidden group h-full flex flex-col"
                     >
-                      <div className="aspect-[4/5] relative">
-                        <img 
-                          src={sport.image_url || `https://picsum.photos/seed/${sport.name}/400/500`} 
-                          alt={sport.name} 
-                          className="w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity duration-500"
-                          referrerPolicy="no-referrer"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-bg-dark via-transparent to-transparent" />
+                      <div className="aspect-[4/5] relative bg-white/5 flex items-center justify-center overflow-hidden">
+                        {sport.image_url ? (
+                          <img 
+                            src={sport.image_url} 
+                            alt={sport.name} 
+                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          <div className="text-6xl mb-4 group-hover:scale-110 transition-transform relative z-10">{sport.icon || '🏆'}</div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-bg-dark via-bg-dark/20 to-transparent" />
                         <div className="absolute inset-0 flex flex-col justify-end p-6">
-                          <div className="text-4xl mb-2">{sport.icon || '🏆'}</div>
-                          <h4 className="text-2xl font-display uppercase tracking-wider mb-4">{sport.name}</h4>
+                          <h4 className="text-2xl font-display uppercase tracking-wider mb-4 text-white drop-shadow-lg">{sport.name}</h4>
                           <button 
                             onClick={() => {
                               setActiveTab('events');
-                              // Optionally scroll to the specific event if we add IDs
                             }}
-                            className="w-full py-3 bg-white/10 hover:bg-maple hover:text-bg-dark border border-white/10 hover:border-maple transition-all font-ui text-[10px] font-bold uppercase tracking-widest"
+                            className="w-full py-3 bg-white/10 hover:bg-maple hover:text-bg-dark border border-white/10 hover:border-maple transition-all font-ui text-[10px] font-bold uppercase tracking-widest backdrop-blur-sm"
                           >
                             View Details
                           </button>
@@ -319,35 +367,40 @@ export default function App() {
                   <p className="text-muted max-w-xl ml-auto">Where creativity takes center stage. A dynamic showcase of talent across all categories.</p>
                 </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                   {categories.filter(c => c.category_type === 'cultural').map((event, i) => (
                     <motion.div 
                       key={event.id}
                       whileHover={{ scale: 1.02 }}
-                      className="card-glass p-1 group overflow-hidden"
+                      className="card-glass p-1 group overflow-hidden h-full flex flex-col"
                     >
-                      <div className="aspect-square relative overflow-hidden rounded-lg mb-4">
-                        <img 
-                          src={event.image_url || `https://picsum.photos/seed/${event.name}/400/400`} 
-                          alt={event.name} 
-                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                          referrerPolicy="no-referrer"
-                        />
+                      <div className="aspect-square relative overflow-hidden rounded-lg mb-4 bg-white/5 flex items-center justify-center">
+                        {event.image_url ? (
+                          <img 
+                            src={event.image_url} 
+                            alt={event.name} 
+                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          <div className="text-6xl group-hover:scale-110 transition-transform relative z-10">
+                            {event.icon || '🎭'}
+                          </div>
+                        )}
                         <div className="absolute inset-0 bg-maple/20 mix-blend-overlay opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <div className="absolute inset-0 flex items-center justify-center text-5xl opacity-0 group-hover:opacity-100 transition-all transform translate-y-4 group-hover:translate-y-0">
-                          {event.icon || '🎭'}
-                        </div>
                       </div>
-                      <div className="p-4 pt-0">
+                      <div className="p-4 pt-0 flex-1 flex flex-col">
                         <h4 className="text-xl font-display uppercase tracking-widest mb-4">{event.name}</h4>
-                        <button 
-                          onClick={() => {
-                            setActiveTab('events');
-                          }}
-                          className="w-full py-2 bg-white/5 hover:bg-white/10 border border-white/10 transition-all font-ui text-[9px] font-bold uppercase tracking-widest text-muted hover:text-text"
-                        >
-                          View Details
-                        </button>
+                        <div className="mt-auto">
+                          <button 
+                            onClick={() => {
+                              setActiveTab('events');
+                            }}
+                            className="w-full py-2 bg-white/5 hover:bg-white/10 border border-white/10 transition-all font-ui text-[9px] font-bold uppercase tracking-widest text-muted hover:text-text"
+                          >
+                            View Details
+                          </button>
+                        </div>
                       </div>
                     </motion.div>
                   ))}
@@ -355,105 +408,7 @@ export default function App() {
               </div>
             </section>
 
-            {/* HOUSES */}
-            <section className="py-32">
-              <div className="max-w-7xl mx-auto px-6">
-                <div className="mb-20">
-                  <p className="sec-label">The Houses</p>
-                  <h2 className="mb-6">Four Houses.<br />One Crown.</h2>
-                  <p className="text-muted max-w-xl text-lg">Each house carries the spirit, pride, and legacy of its warriors.</p>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                  {houses.map((house) => (
-                    <HouseCard key={house.id} house={house} isTop={house.rank_pos === 1} />
-                  ))}
-                </div>
-              </div>
-            </section>
-
-            {/* SCOREBOARD */}
-            <section id="scoreboard" className="py-32 bg-bg2/50 border-y border-border">
-              <div className="max-w-7xl mx-auto px-6">
-                <div className="mb-20 flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
-                  <div>
-                    <p className="sec-label">Live Standings</p>
-                    <h2 className="text-5xl md:text-7xl">The Leaderboard</h2>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 bg-white/5 p-1 border border-border rounded-lg">
-                    {['all', '7-8th', '9-10th', '11th', '12th'].map((grade) => (
-                      <button
-                        key={grade}
-                        onClick={() => setSelectedLeaderboardGrade(grade as any)}
-                        className={cn(
-                          "px-4 py-2 font-ui text-[10px] font-bold uppercase tracking-widest transition-all rounded-md",
-                          selectedLeaderboardGrade === grade ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
-                        )}
-                      >
-                        {grade === 'all' ? 'Overall' : grade}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                
-                <div className="card-glass overflow-hidden">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead>
-                        <tr className="bg-white/5 font-ui text-[10px] font-bold uppercase tracking-[0.2em] text-muted">
-                          <th className="px-8 py-6">#</th>
-                          <th className="px-8 py-6">House</th>
-                          <th className="px-8 py-6 text-center">Points</th>
-                          <th className="px-8 py-6 text-right">Motto</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border">
-                        {sortedHousesByGrade.map((house, idx) => (
-                          <tr key={house.id} className="group hover:bg-white/[0.02] transition-colors">
-                            <td className="px-8 py-6">
-                              <span className={cn(
-                                "font-display text-3xl",
-                                idx === 0 ? "text-maple" : "text-muted"
-                              )}>
-                                {(idx + 1).toString().padStart(2, '0')}
-                              </span>
-                            </td>
-                            <td className="px-8 py-6">
-                              <div className="flex items-center gap-6">
-                                <div className="w-12 h-12 flex items-center justify-center bg-white/5 border border-border overflow-hidden">
-                                  {house.logo_url ? (
-                                    <img 
-                                      src={house.logo_url} 
-                                      alt={house.name} 
-                                      className="w-full h-full object-contain p-2" 
-                                      referrerPolicy="no-referrer"
-                                    />
-                                  ) : (
-                                    <Shield className="text-muted" size={24} />
-                                  )}
-                                </div>
-                                <div>
-                                  <h4 className="text-2xl font-display uppercase tracking-widest">{house.name}</h4>
-                                  <p className="font-ui text-[9px] font-bold text-muted uppercase tracking-widest mt-1">{house.color}</p>
-                                </div>
-                              </div>
-                            </td>
-                            <td className="px-8 py-6 text-center">
-                              <div className="font-display text-4xl text-white">
-                                {gradePoints[house.id]?.[selectedLeaderboardGrade] || 0}
-                              </div>
-                            </td>
-                            <td className="px-8 py-6 text-right">
-                              <p className="font-ui text-[11px] font-bold uppercase tracking-widest text-muted italic">"{house.motto}"</p>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </section>
+            {/* NOTICES PREVIEW */}
           </div>
         );
 
@@ -493,22 +448,6 @@ export default function App() {
           </div>
         );
 
-      case 'houses':
-        return (
-          <div className="max-w-7xl mx-auto px-6 py-24">
-            <div className="mb-16">
-              <p className="sec-label">Houses</p>
-              <h2 className="text-6xl md:text-7xl">The Houses</h2>
-              <p className="text-white/40 mt-4">The four pillars of UCSF 2026.</p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {houses.map((house) => (
-                <HouseCard key={house.id} house={house} isTop={house.rank_pos === 1} />
-              ))}
-            </div>
-          </div>
-        );
-
       case 'notices':
         const filteredNotices = notices.filter(n => noticePriority === 'all' || n.priority === noticePriority);
         return (
@@ -536,7 +475,7 @@ export default function App() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 gap-8">
               <AnimatePresence mode="popLayout">
                 {filteredNotices.map((notice) => (
                   <motion.div 
@@ -545,23 +484,49 @@ export default function App() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95 }}
-                    className="card-glass p-8 group hover:border-maple/30 transition-all"
+                    className={cn(
+                      "card-glass p-8 group hover:border-maple/30 transition-all cursor-pointer",
+                      expandedNoticeId === notice.id && "border-maple/50"
+                    )}
+                    onClick={() => setExpandedNoticeId(expandedNoticeId === notice.id ? null : notice.id)}
                   >
-                    <div className="flex items-center gap-3 mb-4">
-                      <span className={cn(
-                        "px-3 py-1 rounded text-[10px] font-bold uppercase tracking-widest",
-                        notice.priority === 'high' ? "bg-danger/20 text-danger" :
-                        notice.priority === 'medium' ? "bg-maple/20 text-maple" :
-                        "bg-white/5 text-muted"
-                      )}>
-                        {notice.priority} priority
-                      </span>
-                      <span className="font-ui text-[10px] font-bold text-muted uppercase tracking-widest">
-                        {new Date(notice.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                      </span>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                      <div className="flex items-center gap-3">
+                        <span className={cn(
+                          "px-3 py-1 rounded text-[10px] font-bold uppercase tracking-widest",
+                          notice.priority === 'high' ? "bg-danger/20 text-danger" :
+                          notice.priority === 'medium' ? "bg-maple/20 text-maple" :
+                          "bg-white/5 text-muted"
+                        )}>
+                          {notice.priority} priority
+                        </span>
+                        <span className="font-ui text-[10px] font-bold text-muted uppercase tracking-widest">
+                          {new Date(notice.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                        </span>
+                      </div>
+                      <div className="text-maple">
+                        {expandedNoticeId === notice.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                      </div>
                     </div>
+                    
                     <h3 className="text-3xl font-display tracking-wide uppercase mb-4">{notice.title}</h3>
-                    <p className="text-muted text-lg leading-relaxed">{notice.content}</p>
+                    
+                    <AnimatePresence>
+                      {expandedNoticeId === notice.id ? (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="prose prose-invert max-w-none prose-p:text-muted prose-p:text-lg prose-p:leading-relaxed prose-headings:text-white prose-headings:font-display prose-headings:uppercase prose-headings:tracking-widest prose-strong:text-maple prose-a:text-maple hover:prose-a:underline mt-6 pt-6 border-t border-white/10">
+                            <ReactMarkdown>{notice.content}</ReactMarkdown>
+                          </div>
+                        </motion.div>
+                      ) : (
+                        <p className="text-muted text-lg leading-relaxed line-clamp-2">{notice.content}</p>
+                      )}
+                    </AnimatePresence>
                   </motion.div>
                 ))}
               </AnimatePresence>
@@ -664,6 +629,153 @@ export default function App() {
                 >
                   <p className="font-ui text-sm font-bold text-muted uppercase tracking-widest">No items found for this year. Check back soon!</p>
                 </motion.div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'leaderboards':
+        return (
+          <div className="max-w-7xl mx-auto px-6 py-24">
+            <div className="mb-16 flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
+              <div>
+                <p className="sec-label">Rankings</p>
+                <h2 className="text-6xl md:text-7xl">Leaderboards</h2>
+                <p className="text-white/40 mt-4">Current standings of all dynasties across UCSF 2026.</p>
+              </div>
+              
+              <div className="flex flex-col gap-4 w-full md:w-auto">
+                <div className="flex items-center gap-2 bg-white/5 p-1 border border-border rounded-lg overflow-x-auto no-scrollbar">
+                  {['all', '7-8th', '9-10th', '11th', '12th'].map((grade) => (
+                    <button
+                      key={grade}
+                      onClick={() => {
+                        setSelectedLeaderboardGrade(grade as any);
+                        setSelectedLeaderboardEventId('all');
+                      }}
+                      className={cn(
+                        "px-4 py-2 font-ui text-[10px] font-bold uppercase tracking-widest transition-all rounded-md whitespace-nowrap",
+                        selectedLeaderboardGrade === grade && selectedLeaderboardEventId === 'all' ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
+                      )}
+                    >
+                      {grade === 'all' ? 'Overall' : grade}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-2 bg-white/5 p-1 border border-border rounded-lg overflow-x-auto no-scrollbar">
+                  <button
+                    onClick={() => {
+                      setSelectedLeaderboardEventId('all');
+                      setSelectedLeaderboardGrade('all');
+                    }}
+                    className={cn(
+                      "px-4 py-2 font-ui text-[10px] font-bold uppercase tracking-widest transition-all rounded-md whitespace-nowrap",
+                      selectedLeaderboardEventId === 'all' ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
+                    )}
+                  >
+                    All Events
+                  </button>
+                  {categories.map(cat => (
+                    <button
+                      key={cat.id}
+                      onClick={() => {
+                        setSelectedLeaderboardEventId(cat.id);
+                        setSelectedLeaderboardGrade('all');
+                      }}
+                      className={cn(
+                        "px-4 py-2 font-ui text-[10px] font-bold uppercase tracking-widest transition-all rounded-md whitespace-nowrap",
+                        selectedLeaderboardEventId === cat.id ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
+                      )}
+                    >
+                      {cat.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              {sortedHousesForLeaderboard.map((house, index) => {
+                const points = selectedLeaderboardEventId !== 'all' && eventPoints 
+                  ? (eventPoints[house.id] || 0) 
+                  : (gradePoints[house.id]?.[selectedLeaderboardGrade] || 0);
+                
+                return (
+                  <motion.div
+                    key={house.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="card-glass p-8 flex flex-col items-center text-center gap-6 group"
+                  >
+                    <div className="relative">
+                      <div className="w-24 h-24 rounded-full bg-white/5 border border-border flex items-center justify-center overflow-hidden p-4">
+                        <img 
+                          src={house.logo_url || ''} 
+                          alt={house.name} 
+                          className="w-full h-full object-contain"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                      <div className="absolute -top-2 -right-2 w-10 h-10 bg-maple text-bg rounded-full flex items-center justify-center font-display text-xl shadow-lg">
+                        #{index + 1}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <h3 className="text-3xl font-display text-white uppercase tracking-wider">{house.name}</h3>
+                      <p className="font-ui text-[10px] font-bold text-muted uppercase tracking-[0.3em] mt-2 italic">"{house.motto}"</p>
+                    </div>
+
+                    <div className="w-full pt-6 border-t border-border">
+                      <div className="text-5xl font-display text-maple">{points}</div>
+                      <div className="font-ui text-[10px] font-bold text-muted uppercase tracking-widest mt-2">
+                        {selectedLeaderboardEventId !== 'all' ? 'Event Points' : 'Total Points'}
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </div>
+        );
+
+      case 'spreadsheet':
+        const spreadsheetUrl = settings['spreadsheet_url'];
+        return (
+          <div className="max-w-7xl mx-auto px-6 py-24">
+            <div className="mb-16 flex flex-col md:flex-row md:items-end justify-between gap-8">
+              <div>
+                <p className="sec-label">Management</p>
+                <h2 className="text-6xl md:text-7xl">Data Sheet</h2>
+                <p className="text-white/40 mt-4">Detailed event and participant management via Google Sheets.</p>
+              </div>
+              {spreadsheetUrl && (
+                <a 
+                  href={spreadsheetUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="btn-primary flex items-center gap-3"
+                >
+                  <ExternalLink size={20} />
+                  Open Full Sheet
+                </a>
+              )}
+            </div>
+
+            <div className="card-glass h-[800px] overflow-hidden shadow-2xl relative">
+              {spreadsheetUrl ? (
+                <iframe 
+                  src={getEmbedUrl(spreadsheetUrl)} 
+                  className="w-full h-full border-none"
+                  title="Data Spreadsheet"
+                />
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-muted gap-4">
+                  <FileText size={64} className="opacity-10" />
+                  <p className="font-ui text-sm font-bold uppercase tracking-widest">No spreadsheet URL configured</p>
+                </div>
               )}
             </div>
           </div>
