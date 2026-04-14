@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { House, Match, ScheduleItem, Setting, Category, GalleryItem, Notice, CulturalResult, StagedChange, Profile } from '../types';
+import { House, Match, ScheduleItem, Setting, Category, GalleryItem, Notice, CulturalResult } from '../types';
 import { HARDCODED_CATEGORIES } from '../constants/hardcodedData';
 
 // Global cache to persist data across component remounts
