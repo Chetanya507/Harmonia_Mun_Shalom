@@ -111,3 +111,21 @@ export type Notice = {
   priority: 'low' | 'medium' | 'high';
   created_at: string;
 };
+
+export type Profile = {
+  id: string;
+  email: string;
+  is_super_admin: boolean;
+  created_at: string;
+};
+
+export type StagedChange = {
+  id: number;
+  table_name: string;
+  record_id: string;
+  updates: any;
+  created_by: string;
+  created_by_email: string;
+  status: 'pending' | 'approved' | 'discarded';
+  created_at: string;
+};

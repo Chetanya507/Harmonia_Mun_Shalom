@@ -13,6 +13,8 @@ const globalCache: Record<string, any> = {
   gallery: null,
   notices: null,
   culturalResults: null,
+  stagedChanges: null,
+  profile: null,
   lastFetched: 0
 };
 
@@ -30,7 +32,7 @@ async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 1000): Pr
   }
 }
 
-export function useUCSFData() {
+export function useAdminData() {
   const [houses, setHouses] = useState<House[]>(globalCache.houses || []);
   const [matches, setMatches] = useState<Match[]>(globalCache.matches || []);
   const [schedule, setSchedule] = useState<ScheduleItem[]>(globalCache.schedule || []);
@@ -39,6 +41,8 @@ export function useUCSFData() {
   const [gallery, setGallery] = useState<GalleryItem[]>(globalCache.gallery || []);
   const [notices, setNotices] = useState<Notice[]>(globalCache.notices || []);
   const [culturalResults, setCulturalResults] = useState<CulturalResult[]>(globalCache.culturalResults || []);
+  const [stagedChanges, setStagedChanges] = useState<StagedChange[]>(globalCache.stagedChanges || []);
+  const [profile, setProfile] = useState<Profile | null>(globalCache.profile || null);
   const [loading, setLoading] = useState(!globalCache.lastFetched);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -127,6 +131,47 @@ export function useUCSFData() {
     }
   };
 
+  const fetchStagedChanges = async () => {
+    const { data } = await supabase!.from('staged_changes').select('*').order('created_at', { ascending: false });
+    if (data) {
+      setStagedChanges(data);
+      globalCache.stagedChanges = data;
+    }
+  };
+
+  const fetchProfile = async () => {
+    const { data: { session } } = await supabase!.auth.getSession();
+    const user = session?.user;
+    
+    if (!user) {
+      setProfile(null);
+      globalCache.profile = null;
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase!.from('profiles').select('*').eq('id', user.id).single();
+      if (data) {
+        setProfile(data);
+        globalCache.profile = data;
+      } else if (error && error.code === 'PGRST116') {
+        const isSuperAdmin = user.email === 'kotadia.ean@gmail.com';
+        const { data: newProfile } = await supabase!.from('profiles').insert([{
+          id: user.id,
+          email: user.email,
+          is_super_admin: isSuperAdmin
+        }]).select().single();
+        
+        if (newProfile) {
+          setProfile(newProfile);
+          globalCache.profile = newProfile;
+        }
+      }
+    } catch (err) {
+      console.warn('Profile fetch error:', err);
+    }
+  };
+
   const fetchData = async (isInitial = false) => {
     if (!supabase) {
       setError('Supabase credentials missing.');
@@ -143,6 +188,8 @@ export function useUCSFData() {
       if (isInitial && !globalCache.lastFetched) setLoading(true);
       else setIsRefreshing(true);
 
+      await withRetry(fetchProfile);
+
       await Promise.all([
         withRetry(fetchHouses),
         withRetry(fetchMatches),
@@ -151,7 +198,8 @@ export function useUCSFData() {
         withRetry(fetchCategories),
         withRetry(fetchGallery),
         withRetry(fetchNotices),
-        withRetry(fetchCulturalResults)
+        withRetry(fetchCulturalResults),
+        withRetry(fetchStagedChanges)
       ]);
       
       globalCache.lastFetched = Date.now();
@@ -180,6 +228,8 @@ export function useUCSFData() {
     const gallerySub = supabase.channel('gallery-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'gallery' }, fetchGallery).subscribe();
     const noticesSub = supabase.channel('notices-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'notices' }, fetchNotices).subscribe();
     const culturalSub = supabase.channel('cultural-results-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'cultural_results' }, fetchCulturalResults).subscribe();
+    const stagedSub = supabase.channel('staged-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'staged_changes' }, fetchStagedChanges).subscribe();
+    const profileSub = supabase.channel('profile-changes').on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, fetchProfile).subscribe();
 
     return () => {
       if (supabase) {
@@ -191,11 +241,13 @@ export function useUCSFData() {
         supabase.removeChannel(gallerySub);
         supabase.removeChannel(noticesSub);
         supabase.removeChannel(culturalSub);
+        supabase.removeChannel(stagedSub);
+        supabase.removeChannel(profileSub);
       }
     };
   }, []);
 
   const refresh = React.useCallback(() => fetchData(false), []);
 
-  return { houses, matches, schedule, settings, categories, gallery, notices, culturalResults, loading, isRefreshing, error, refresh };
+  return { houses, matches, schedule, settings, categories, gallery, notices, culturalResults, stagedChanges, profile, loading, isRefreshing, error, refresh };
 }
