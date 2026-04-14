@@ -1,11 +1,11 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import AdminPanel from './components/AdminPanel';
-import './index.css';
-import { useUCSFData } from './hooks/useUCSFData';
+import AdminPanel from './AdminPanel';
+import '../index.css';
+import { useAdminData } from '../hooks/useAdminData';
 
 const AdminWrapper = () => {
-  const { houses, matches, schedule, settings, categories, notices, gallery, culturalResults, stagedChanges, profile, refresh, loading, isRefreshing } = useUCSFData();
+  const { houses, matches, schedule, settings, categories, notices, gallery, culturalResults, stagedChanges, profile, refresh, loading, isRefreshing } = useAdminData();
 
   if (loading) {
     return (

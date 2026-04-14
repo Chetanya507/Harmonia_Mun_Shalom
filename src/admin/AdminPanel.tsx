@@ -64,10 +64,10 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
     return (
       <motion.div 
         layout
-        className="bg-bg2 border border-white/5 rounded-[3rem] p-10 group hover:border-maple/30 transition-all shadow-2xl space-y-8 relative overflow-hidden"
+        className="bg-bg2 border border-white/5 rounded-[1.5rem] sm:rounded-[3rem] p-5 sm:p-10 group hover:border-maple/30 transition-all shadow-2xl space-y-6 sm:space-y-8 relative overflow-hidden"
       >
-      <div className="flex items-start justify-between gap-8">
-        <div className="relative group/icon w-24 h-24 bg-white/5 rounded-[2rem] flex items-center justify-center text-5xl border border-white/5 group-hover:border-maple/50 transition-all overflow-hidden shadow-inner">
+      <div className="flex flex-col sm:flex-row items-start justify-between gap-6 sm:gap-8">
+        <div className="relative group/icon w-16 h-16 sm:w-24 sm:h-24 bg-white/5 rounded-[1.2rem] sm:rounded-[2rem] flex items-center justify-center text-3xl sm:text-5xl border border-white/5 group-hover:border-maple/50 transition-all overflow-hidden shadow-inner shrink-0">
           {cat.image_url ? (
             <img 
               src={cat.image_url} 
@@ -76,7 +76,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
               referrerPolicy="no-referrer"
             />
           ) : (
-            <span className="relative z-10">{cat.icon || <Layers size={32} className="text-muted/30" />}</span>
+            <span className="relative z-10">{cat.icon || <Layers size={24} className="text-muted/30" />}</span>
           )}
           <input
             type="text"
@@ -86,41 +86,41 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
             onBlur={(e) => updateCategory(cat.id, { icon: e.target.value })}
           />
           <div className="absolute inset-0 bg-maple/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-            <span className="text-[8px] font-bold uppercase tracking-widest text-maple mt-14">Edit Icon</span>
+            <span className="text-[7px] font-bold uppercase tracking-widest text-maple mt-10 sm:mt-14">Edit Icon</span>
           </div>
         </div>
-        <div className="flex-1 space-y-5">
-          <div className="flex items-center justify-between">
+        <div className="flex-1 space-y-4 sm:space-y-5 w-full">
+          <div className="flex items-center justify-between gap-4">
             <input
               type="text"
               defaultValue={cat.name}
-              className="w-full bg-transparent border-none text-3xl font-display uppercase tracking-tighter text-white outline-none focus:text-maple transition-colors"
+              className="flex-1 bg-transparent border-none text-xl sm:text-3xl font-display uppercase tracking-tighter text-white outline-none focus:text-maple transition-colors min-w-0"
               onBlur={(e) => updateCategory(cat.id, { name: e.target.value })}
             />
             <button 
               onClick={() => deleteCategory(cat.id)}
-              className="w-10 h-10 bg-danger/5 hover:bg-danger text-danger hover:text-white rounded-xl transition-all border border-danger/10 flex items-center justify-center active:scale-90 opacity-0 group-hover:opacity-100"
+              className="w-8 h-8 sm:w-10 sm:h-10 bg-danger/5 hover:bg-danger text-danger hover:text-white rounded-lg sm:rounded-xl transition-all border border-danger/10 flex items-center justify-center active:scale-90 opacity-100 sm:opacity-0 group-hover:opacity-100 shrink-0"
             >
-              <Trash2 size={18} />
+              <Trash2 size={16} />
             </button>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-xl border border-white/5 shadow-inner">
-              <span className="font-ui text-[9px] font-bold text-muted uppercase tracking-[0.2em]">Order</span>
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+            <div className="flex items-center gap-3 bg-white/5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-white/5 shadow-inner">
+              <span className="font-ui text-[8px] sm:text-[9px] font-bold text-muted uppercase tracking-[0.2em]">Order</span>
               <input
                 type="number"
                 defaultValue={cat.sort_order}
-                className="w-10 bg-transparent border-none text-white text-[11px] font-bold text-center outline-none focus:text-maple"
+                className="w-8 sm:w-10 bg-transparent border-none text-white text-[10px] sm:text-[11px] font-bold text-center outline-none focus:text-maple"
                 onBlur={(e) => updateCategory(cat.id, { sort_order: parseInt(e.target.value) })}
               />
             </div>
-            <div className="flex items-center gap-2 bg-white/5 p-1 border border-white/5 rounded-xl">
+            <div className="flex items-center gap-1.5 sm:gap-2 bg-white/5 p-1 border border-white/5 rounded-lg sm:rounded-xl">
               {['sport', 'cultural'].map((type) => (
                 <button
                   key={type}
                   onClick={() => updateCategory(cat.id, { category_type: type as any })}
                   className={cn(
-                    "px-4 py-2 font-ui text-[9px] font-bold uppercase tracking-[0.2em] transition-all rounded-lg whitespace-nowrap",
+                    "px-3 sm:px-4 py-1.5 sm:py-2 font-ui text-[8px] sm:text-[9px] font-bold uppercase tracking-[0.2em] transition-all rounded-md sm:rounded-lg whitespace-nowrap",
                     (cat.category_type || 'sport') === type ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
                   )}
                 >
@@ -132,24 +132,24 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
         </div>
       </div>
 
-      <div className="space-y-4 pt-4">
+      <div className="space-y-3 sm:space-y-4 pt-4 border-t border-white/5">
         <div className="space-y-2">
-          <label className="font-ui text-[9px] font-bold text-muted uppercase tracking-[0.3em] ml-1">Image URL</label>
+          <label className="font-ui text-[8px] sm:text-[9px] font-bold text-muted uppercase tracking-[0.3em] ml-1">Image URL</label>
           <div className="relative group/img flex gap-3">
             <input
               type="text"
               defaultValue={cat.image_url || ''}
               placeholder="https://images.unsplash.com/..."
-              className="flex-1 bg-white/5 border border-white/5 rounded-2xl px-5 py-4 text-[10px] font-bold tracking-widest text-muted outline-none focus:border-maple/50 focus:text-text transition-all shadow-inner pr-12"
+              className="flex-1 bg-white/5 border border-white/5 rounded-xl sm:rounded-2xl px-4 sm:px-5 py-3 sm:py-4 text-[9px] sm:text-[10px] font-bold tracking-widest text-muted outline-none focus:border-maple/50 focus:text-text transition-all shadow-inner pr-10 sm:pr-12"
               onBlur={(e) => updateCategory(cat.id, { image_url: e.target.value })}
               id={`cat-img-${cat.id}`}
             />
             <button 
               onClick={() => document.getElementById(`cat-upload-${cat.id}`)?.click()}
-              className="bg-white/5 hover:bg-white/10 text-white p-4 rounded-2xl border border-white/5 transition-all active:scale-90 shadow-lg"
+              className="bg-white/5 hover:bg-white/10 text-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-white/5 transition-all active:scale-90 shadow-lg"
               title="Upload Image"
             >
-              <Upload size={18} />
+              <Upload size={16} />
             </button>
             <input 
               type="file"
@@ -256,6 +256,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
   };
 
   const [activeTab, setActiveTab] = useState<AdminTab>('results');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [localSettings, setLocalSettings] = useState<Record<string, string>>({});
   const [hasChanges, setHasChanges] = useState(false);
   const [selectedResultCategory, setSelectedResultCategory] = useState<string | null>(null);
@@ -1020,63 +1021,88 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
 
   return (
     <>
-      <div className="min-h-screen bg-bg text-white flex overflow-hidden">
-        {/* Sidebar */}
-      <aside className="w-72 bg-[#0d1b33] border-r border-white/5 flex flex-col flex-shrink-0 z-50">
-        <div className="p-10 border-b border-white/5">
-          <div className="flex items-center justify-center">
-            <motion.img 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              src={localSettings['school_logo_url'] || "https://www.shalomhills.com/images/logo.png"} 
-              alt="School Logo" 
-              className="h-14 object-contain drop-shadow-2xl"
-              referrerPolicy="no-referrer"
+      <div className="min-h-screen bg-bg text-white flex overflow-hidden relative">
+        {/* Sidebar Overlay for Mobile */}
+        <AnimatePresence>
+          {isSidebarOpen && (
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSidebarOpen(false)}
+              className="fixed inset-0 bg-bg/80 backdrop-blur-sm z-[60] lg:hidden"
             />
-          </div>
-        </div>
+          )}
+        </AnimatePresence>
 
-        <nav className="flex-1 overflow-y-auto p-6 space-y-2 custom-scrollbar">
-          {[
-            { id: 'results', label: 'Event Results', icon: Trophy },
-            { id: 'matches', label: 'Matches', icon: Activity },
-            { id: 'schedule', label: 'Schedule', icon: Calendar },
-            { id: 'categories', label: 'Categories', icon: Layers },
-            { id: 'notices', label: 'Notices', icon: Bell },
-            { id: 'gallery', label: 'Gallery', icon: ImageIcon },
-            { id: 'leaderboards', label: 'Leaderboards', icon: Trophy },
-            { id: 'spreadsheet', label: 'Spreadsheet', icon: FileText },
-            { id: 'settings', label: 'Settings', icon: SettingsIcon },
-            ...(profile?.is_super_admin ? [{ id: 'changes', label: 'Approvals', icon: CheckCircle }] : []),
-          ].map((item) => (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id as AdminTab)}
-              className={cn(
-                "w-full flex items-center justify-between px-5 py-4 font-sans text-[11px] font-bold uppercase tracking-[0.2em] transition-all group rounded-2xl border border-transparent",
-                activeTab === item.id 
-                  ? "bg-maple text-bg shadow-xl shadow-maple/20 border-maple/50" 
-                  : "text-muted hover:text-text hover:bg-white/5 hover:border-white/5"
-              )}
+        {/* Sidebar */}
+        <aside className={cn(
+          "fixed inset-y-0 left-0 w-72 bg-[#0d1b33] border-r border-white/5 flex flex-col flex-shrink-0 z-[70] transition-transform duration-300 lg:translate-x-0 lg:static",
+          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        )}>
+          <div className="p-10 border-b border-white/5 flex items-center justify-between">
+            <div className="flex items-center justify-center flex-1">
+              <motion.img 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                src={localSettings['school_logo_url'] || "https://www.shalomhills.com/images/logo.png"} 
+                alt="School Logo" 
+                className="h-14 object-contain drop-shadow-2xl"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+            <button 
+              onClick={() => setIsSidebarOpen(false)}
+              className="lg:hidden p-2 text-muted hover:text-white"
             >
-              <div className="flex items-center gap-4">
-                <item.icon size={18} className={cn(
-                  "transition-all duration-300",
-                  activeTab === item.id ? "text-bg scale-110" : "text-muted group-hover:text-maple group-hover:scale-110"
-                )} />
-                {item.label}
-              </div>
-              {item.id === 'settings' && hasChanges && (
-                <div className="w-2 h-2 rounded-full bg-danger animate-pulse shadow-[0_0_15px_rgba(230,57,70,0.8)]" />
-              )}
-              {item.id === 'changes' && stagedChanges.filter(c => c.status === 'pending').length > 0 && (
-                <div className="bg-danger text-white text-[8px] font-bold px-2 py-0.5 rounded-full shadow-lg">
-                  {stagedChanges.filter(c => c.status === 'pending').length}
-                </div>
-              )}
+              <X size={20} />
             </button>
-          ))}
-        </nav>
+          </div>
+
+          <nav className="flex-1 overflow-y-auto p-6 space-y-2 custom-scrollbar">
+            {[
+              { id: 'results', label: 'Event Results', icon: Trophy },
+              { id: 'matches', label: 'Matches', icon: Activity },
+              { id: 'schedule', label: 'Schedule', icon: Calendar },
+              { id: 'categories', label: 'Categories', icon: Layers },
+              { id: 'notices', label: 'Notices', icon: Bell },
+              { id: 'gallery', label: 'Gallery', icon: ImageIcon },
+              { id: 'leaderboards', label: 'Leaderboards', icon: Trophy },
+              { id: 'spreadsheet', label: 'Spreadsheet', icon: FileText },
+              { id: 'settings', label: 'Settings', icon: SettingsIcon },
+              ...(profile?.is_super_admin ? [{ id: 'changes', label: 'Approvals', icon: CheckCircle }] : []),
+            ].map((item) => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setActiveTab(item.id as AdminTab);
+                  setIsSidebarOpen(false);
+                }}
+                className={cn(
+                  "w-full flex items-center justify-between px-5 py-4 font-sans text-[11px] font-bold uppercase tracking-[0.2em] transition-all group rounded-2xl border border-transparent",
+                  activeTab === item.id 
+                    ? "bg-maple text-bg shadow-xl shadow-maple/20 border-maple/50" 
+                    : "text-muted hover:text-text hover:bg-white/5 hover:border-white/5"
+                )}
+              >
+                <div className="flex items-center gap-4">
+                  <item.icon size={18} className={cn(
+                    "transition-all duration-300",
+                    activeTab === item.id ? "text-bg scale-110" : "text-muted group-hover:text-maple group-hover:scale-110"
+                  )} />
+                  {item.label}
+                </div>
+                {item.id === 'settings' && hasChanges && (
+                  <div className="w-2 h-2 rounded-full bg-danger animate-pulse shadow-[0_0_15px_rgba(230,57,70,0.8)]" />
+                )}
+                {item.id === 'changes' && stagedChanges.filter(c => c.status === 'pending').length > 0 && (
+                  <div className="bg-danger text-white text-[8px] font-bold px-2 py-0.5 rounded-full shadow-lg">
+                    {stagedChanges.filter(c => c.status === 'pending').length}
+                  </div>
+                )}
+              </button>
+            ))}
+          </nav>
 
         <div className="p-6 border-t border-white/5 space-y-6">
           {hasPendingChanges && (
@@ -1140,46 +1166,56 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Header */}
-        <header className="h-24 bg-[#0d1b33]/80 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-12 flex-shrink-0 z-40">
-          <div className="flex items-center gap-6">
-            <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-maple border border-white/5">
-              {activeTab === 'results' && <Trophy size={24} />}
-              {activeTab === 'matches' && <Activity size={24} />}
-              {activeTab === 'schedule' && <Calendar size={24} />}
-              {activeTab === 'categories' && <Layers size={24} />}
-              {activeTab === 'notices' && <Bell size={24} />}
-              {activeTab === 'settings' && <SettingsIcon size={24} />}
+        <header className="h-24 bg-[#0d1b33]/80 backdrop-blur-xl border-b border-white/5 flex items-center justify-between px-6 lg:px-12 flex-shrink-0 z-40">
+          <div className="flex items-center gap-4 lg:gap-6">
+            <button 
+              onClick={() => setIsSidebarOpen(true)}
+              className="lg:hidden p-3 bg-white/5 rounded-xl text-muted hover:text-white transition-all"
+            >
+              <Shield size={20} />
+            </button>
+            <div className="w-10 h-10 lg:w-12 lg:h-12 bg-white/5 rounded-2xl flex items-center justify-center text-maple border border-white/5">
+              {activeTab === 'results' && <Trophy size={20} />}
+              {activeTab === 'matches' && <Activity size={20} />}
+              {activeTab === 'schedule' && <Calendar size={20} />}
+              {activeTab === 'categories' && <Layers size={20} />}
+              {activeTab === 'notices' && <Bell size={20} />}
+              {activeTab === 'settings' && <SettingsIcon size={20} />}
+              {activeTab === 'gallery' && <ImageIcon size={20} />}
+              {activeTab === 'leaderboards' && <Trophy size={20} />}
+              {activeTab === 'spreadsheet' && <FileText size={20} />}
+              {activeTab === 'changes' && <CheckCircle size={20} />}
             </div>
             <div>
-              <h2 className="text-3xl font-display tracking-tighter uppercase text-white leading-none">{activeTab}</h2>
-              <p className="font-sans text-[10px] font-bold text-muted uppercase tracking-[0.4em] mt-2">Management Portal</p>
+              <h2 className="text-xl lg:text-3xl font-display tracking-tighter uppercase text-white leading-none">{activeTab}</h2>
+              <p className="hidden sm:block font-sans text-[10px] font-bold text-muted uppercase tracking-[0.4em] mt-2">Management Portal</p>
             </div>
             {loading && (
-              <div className="flex items-center gap-3 text-maple font-ui text-[9px] font-bold uppercase tracking-[0.3em] bg-maple/10 px-4 py-2 rounded-full border border-maple/20 ml-4 animate-pulse">
+              <div className="hidden md:flex items-center gap-3 text-maple font-ui text-[9px] font-bold uppercase tracking-[0.3em] bg-maple/10 px-4 py-2 rounded-full border border-maple/20 ml-4 animate-pulse">
                 <RefreshCw size={12} className="animate-spin" />
                 Synchronizing...
               </div>
             )}
           </div>
 
-          <div className="flex items-center gap-8">
-            <div className="hidden md:flex items-center gap-3 px-5 py-2.5 bg-white/5 border border-white/5 rounded-2xl">
+          <div className="flex items-center gap-4 lg:gap-8">
+            <div className="hidden xl:flex items-center gap-3 px-5 py-2.5 bg-white/5 border border-white/5 rounded-2xl">
               <div className="w-2 h-2 rounded-full bg-success shadow-[0_0_15px_rgba(34,197,94,0.6)] animate-pulse" />
               <span className="font-sans text-[10px] font-bold text-muted uppercase tracking-[0.2em]">System Status: Online</span>
             </div>
             <button 
               onClick={refresh}
-              className="w-12 h-12 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl text-muted hover:text-maple transition-all flex items-center justify-center active:scale-95"
+              className="w-10 h-10 lg:w-12 lg:h-12 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl text-muted hover:text-maple transition-all flex items-center justify-center active:scale-95"
               title="Refresh Data"
             >
-              <RefreshCw size={20} />
+              <RefreshCw size={18} />
             </button>
           </div>
         </header>
 
         {/* Content Scroll Area */}
-        <main className="flex-1 overflow-y-auto p-10 custom-scrollbar">
-          <div className="max-w-6xl mx-auto space-y-8">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10 custom-scrollbar">
+          <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
             {error && (
               <motion.div 
                 initial={{ opacity: 0, y: -10 }}
@@ -1227,19 +1263,19 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                   exit={{ opacity: 0, x: -20 }}
                   className="space-y-12"
                 >
-                  <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
-                    <div>
-                      <h2 className="text-5xl font-display uppercase tracking-tighter text-white">Event Results</h2>
-                      <p className="text-muted mt-2 font-sans text-[10px] font-bold uppercase tracking-[0.3em]">Enter scores and rankings for real-time feedback</p>
+                  <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 sm:gap-8">
+                    <div className="w-full lg:w-auto text-center lg:text-left">
+                      <h2 className="text-2xl sm:text-5xl font-display uppercase tracking-tighter text-white">Event Results</h2>
+                      <p className="text-muted mt-2 font-sans text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.3em]">Enter scores and rankings for real-time feedback</p>
                     </div>
                     
-                    <div className="flex items-center gap-2 bg-white/5 p-1 border border-white/5 rounded-2xl overflow-x-auto no-scrollbar max-w-full">
+                    <div className="flex items-center gap-2 bg-white/5 p-1 border border-white/5 rounded-xl sm:rounded-2xl overflow-x-auto no-scrollbar max-w-full w-full lg:w-auto">
                       {categories.map(cat => (
                         <button
                           key={cat.id}
                           onClick={() => setSelectedResultCategory(cat.id)}
                           className={cn(
-                            "px-6 py-3 font-ui text-[10px] font-bold uppercase tracking-widest transition-all rounded-xl whitespace-nowrap",
+                            "px-4 sm:px-6 py-2 sm:py-3 font-ui text-[8px] sm:text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg sm:rounded-xl whitespace-nowrap",
                             selectedResultCategory === cat.id ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
                           )}
                         >
@@ -1254,15 +1290,15 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                       {categories.find(c => c.id === selectedResultCategory)?.category_type === 'sport' ? (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                           {matches.filter(m => m.category_id === selectedResultCategory).map(match => (
-                            <div key={match.id} className="bg-bg2 border border-white/5 rounded-[2rem] p-8 space-y-6">
+                            <div key={match.id} className="bg-bg2 border border-white/5 rounded-[1.5rem] sm:rounded-[2rem] p-6 sm:p-8 space-y-6">
                               <div className="flex justify-between items-center border-b border-white/5 pb-4">
                                 <span className="font-ui text-[9px] font-bold text-muted uppercase tracking-widest">Match #{match.match_no}</span>
                                 <span className="font-ui text-[9px] font-bold text-maple uppercase tracking-widest">{match.eligible_years}</span>
                               </div>
                               
-                              <div className="grid grid-cols-3 items-center gap-4">
+                              <div className="grid grid-cols-1 sm:grid-cols-3 items-center gap-4">
                                 <div className="text-center space-y-2">
-                                  <p className="font-display text-lg uppercase truncate">{houses.find(h => h.id === match.team1_id)?.name}</p>
+                                  <p className="font-display text-base sm:text-lg uppercase truncate">{houses.find(h => h.id === match.team1_id)?.name}</p>
                                   <input 
                                     type="number" 
                                     value={match.score1}
@@ -1270,9 +1306,9 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                                     className="w-full bg-white/5 border border-white/5 rounded-xl py-3 text-center text-2xl font-display text-white outline-none focus:border-maple/50"
                                   />
                                 </div>
-                                <div className="text-center text-muted font-display text-2xl">VS</div>
+                                <div className="text-center text-muted font-display text-xl sm:text-2xl py-2 sm:py-0">VS</div>
                                 <div className="text-center space-y-2">
-                                  <p className="font-display text-lg uppercase truncate">{houses.find(h => h.id === match.team2_id)?.name}</p>
+                                  <p className="font-display text-base sm:text-lg uppercase truncate">{houses.find(h => h.id === match.team2_id)?.name}</p>
                                   <input 
                                     type="number" 
                                     value={match.score2}
@@ -1299,50 +1335,54 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                           ))}
                         </div>
                       ) : (
-                        <div className="bg-bg2 border border-white/5 rounded-[3rem] p-10 space-y-8">
-                          <div className="flex items-center justify-between">
-                            <h3 className="text-3xl font-display uppercase tracking-tighter text-white">Dynasty Rankings</h3>
+                        <div className="bg-bg2 border border-white/5 rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-10 space-y-8">
+                          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <h3 className="text-2xl sm:text-3xl font-display uppercase tracking-tighter text-white">Dynasty Rankings</h3>
                             <button 
                               onClick={() => addCulturalResult(selectedResultCategory)}
-                              className="btn-primary px-6 py-2 rounded-xl text-[9px]"
+                              className="w-full sm:w-auto bg-maple hover:bg-maple/90 text-bg py-3 px-6 rounded-xl font-ui text-[9px] font-bold uppercase tracking-[0.2em] transition-all shadow-xl shadow-maple/20 flex items-center justify-center gap-2 active:scale-95"
                             >
-                              <Plus size={14} className="mr-2" /> Add Rank
+                              <Plus size={14} /> Add Rank
                             </button>
                           </div>
                           
                           <div className="space-y-4">
                             {culturalResults.filter(r => r.category_id === selectedResultCategory).sort((a, b) => a.rank - b.rank).map((result) => (
-                              <div key={result.id} className="flex items-center gap-6 bg-white/5 p-6 rounded-2xl border border-white/5 group/res">
-                                <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center font-display text-2xl text-maple">
-                                  <input
-                                    type="number"
-                                    defaultValue={result.rank}
-                                    className="w-full bg-transparent border-none text-center outline-none"
-                                    onBlur={(e) => updateCulturalResult(result.id, { rank: parseInt(e.target.value) })}
-                                  />
+                              <div key={result.id} className="flex flex-col lg:flex-row items-center gap-4 sm:gap-6 bg-white/5 p-4 sm:p-6 rounded-2xl border border-white/5 group/res">
+                                <div className="flex items-center gap-4 w-full lg:w-auto">
+                                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/5 rounded-xl flex items-center justify-center font-display text-xl sm:text-2xl text-maple shrink-0">
+                                    <input
+                                      type="number"
+                                      defaultValue={result.rank}
+                                      className="w-full bg-transparent border-none text-center outline-none"
+                                      onBlur={(e) => updateCulturalResult(result.id, { rank: parseInt(e.target.value) })}
+                                    />
+                                  </div>
+                                  <select
+                                    value={result.house_id}
+                                    onChange={(e) => updateCulturalResult(result.id, { house_id: e.target.value })}
+                                    className="flex-1 bg-transparent border-none text-[10px] sm:text-xs font-bold uppercase tracking-widest text-white outline-none truncate"
+                                  >
+                                    {houses.map(h => <option key={h.id} value={h.id} className="bg-bg-dark">{h.name}</option>)}
+                                  </select>
                                 </div>
-                                <select
-                                  value={result.house_id}
-                                  onChange={(e) => updateCulturalResult(result.id, { house_id: e.target.value })}
-                                  className="flex-1 bg-transparent border-none text-xs font-bold uppercase tracking-widest text-white outline-none"
-                                >
-                                  {houses.map(h => <option key={h.id} value={h.id} className="bg-bg-dark">{h.name}</option>)}
-                                </select>
-                                <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-xl">
-                                  <span className="text-[10px] font-bold text-muted uppercase">Points</span>
-                                  <input
-                                    type="number"
-                                    defaultValue={result.points}
-                                    className="w-16 bg-transparent border-none text-sm font-bold text-maple text-center outline-none"
-                                    onBlur={(e) => updateCulturalResult(result.id, { points: parseInt(e.target.value) })}
-                                  />
+                                <div className="flex items-center justify-between w-full lg:w-auto gap-4">
+                                  <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-xl border border-white/5 flex-1 lg:flex-none">
+                                    <span className="text-[9px] sm:text-[10px] font-bold text-muted uppercase">Points</span>
+                                    <input
+                                      type="number"
+                                      defaultValue={result.points}
+                                      className="w-full lg:w-16 bg-transparent border-none text-sm font-bold text-maple text-center outline-none"
+                                      onBlur={(e) => updateCulturalResult(result.id, { points: parseInt(e.target.value) })}
+                                    />
+                                  </div>
+                                  <button 
+                                    onClick={() => deleteCulturalResult(result.id)}
+                                    className="p-3 sm:p-2 text-danger/50 hover:text-danger hover:bg-danger/10 rounded-lg transition-all shrink-0"
+                                  >
+                                    <Trash2 size={18} />
+                                  </button>
                                 </div>
-                                <button 
-                                  onClick={() => deleteCulturalResult(result.id)}
-                                  className="p-2 text-danger/50 hover:text-danger hover:bg-danger/10 rounded-lg transition-all"
-                                >
-                                  <Trash2 size={18} />
-                                </button>
                               </div>
                             ))}
                           </div>
@@ -1367,23 +1407,23 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                   className="space-y-8"
                 >
                   {/* Search & Filter Bar */}
-                  <div className="flex flex-wrap items-center justify-between gap-6 bg-[#0d1b33] p-8 rounded-[2.5rem] border border-white/5 shadow-2xl">
-                    <div className="flex-1 min-w-[300px] relative group">
-                      <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-maple transition-colors" size={20} />
+                  <div className="flex flex-col lg:flex-row items-center justify-between gap-6 bg-[#0d1b33] p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-white/5 shadow-2xl">
+                    <div className="w-full lg:flex-1 min-w-0 lg:min-w-[300px] relative group">
+                      <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-maple transition-colors" size={18} />
                       <input 
                         type="text" 
                         placeholder="Search matches, teams, venues..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full bg-white/5 border border-white/5 focus:border-maple/50 focus:bg-white/10 rounded-2xl py-5 pl-16 pr-8 text-sm outline-none transition-all placeholder:text-muted/50"
+                        className="w-full bg-white/5 border border-white/5 focus:border-maple/50 focus:bg-white/10 rounded-xl sm:rounded-2xl py-4 sm:py-5 pl-14 sm:pl-16 pr-6 sm:pr-8 text-[12px] sm:text-sm outline-none transition-all placeholder:text-muted/50"
                       />
                     </div>
-                    <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 bg-white/5 p-1 border border-white/5 rounded-2xl overflow-x-auto no-scrollbar max-w-full">
+                    <div className="w-full lg:w-auto flex items-center gap-4">
+                    <div className="flex items-center gap-2 bg-white/5 p-1 border border-white/5 rounded-xl sm:rounded-2xl overflow-x-auto no-scrollbar max-w-full w-full">
                       <button
                         onClick={() => setCategoryFilter('all')}
                         className={cn(
-                          "px-6 py-3 font-ui text-[10px] font-bold uppercase tracking-widest transition-all rounded-xl whitespace-nowrap",
+                          "px-4 sm:px-6 py-2 sm:py-3 font-ui text-[8px] sm:text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg sm:rounded-xl whitespace-nowrap",
                           categoryFilter === 'all' ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
                         )}
                       >
@@ -1394,7 +1434,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                           key={cat.id}
                           onClick={() => setCategoryFilter(cat.id)}
                           className={cn(
-                            "px-6 py-3 font-ui text-[10px] font-bold uppercase tracking-widest transition-all rounded-xl whitespace-nowrap",
+                            "px-4 sm:px-6 py-2 sm:py-3 font-ui text-[8px] sm:text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg sm:rounded-xl whitespace-nowrap",
                             categoryFilter === cat.id ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
                           )}
                         >
@@ -1424,19 +1464,21 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
 
                       return (
                         <div key={cat.id} className="space-y-10">
-                          <div className="flex items-center gap-6 border-b border-white/5 pb-6">
-                            <div className="w-16 h-16 bg-maple/10 rounded-[1.5rem] flex items-center justify-center text-maple text-3xl border border-maple/20 shadow-inner">
-                              {cat.icon || '🏆'}
-                            </div>
-                            <div>
-                              <h3 className="text-3xl font-display uppercase tracking-tighter text-white">{cat.name}</h3>
-                              <p className="font-sans text-[10px] font-bold text-muted uppercase tracking-[0.4em] mt-2">
-                                {catMatches.length} Active Records
-                              </p>
+                          <div className="flex flex-col sm:flex-row items-center gap-6 border-b border-white/5 pb-6">
+                            <div className="flex items-center gap-6 w-full sm:w-auto">
+                              <div className="w-12 h-12 sm:w-16 sm:h-16 bg-maple/10 rounded-[1.2rem] sm:rounded-[1.5rem] flex items-center justify-center text-maple text-2xl sm:text-3xl border border-maple/20 shadow-inner shrink-0">
+                                {cat.icon || '🏆'}
+                              </div>
+                              <div>
+                                <h3 className="text-2xl sm:text-3xl font-display uppercase tracking-tighter text-white">{cat.name}</h3>
+                                <p className="font-sans text-[10px] font-bold text-muted uppercase tracking-[0.4em] mt-2">
+                                  {catMatches.length} Active Records
+                                </p>
+                              </div>
                             </div>
                             <button 
                               onClick={() => addMatch(cat.id)}
-                              className="ml-auto bg-maple/10 hover:bg-maple/20 text-maple py-3 px-6 rounded-xl font-ui text-[10px] font-bold uppercase tracking-[0.2em] transition-all border border-maple/20 flex items-center gap-2 active:scale-95"
+                              className="w-full sm:w-auto sm:ml-auto bg-maple/10 hover:bg-maple/20 text-maple py-3 px-6 rounded-xl font-ui text-[10px] font-bold uppercase tracking-[0.2em] transition-all border border-maple/20 flex items-center justify-center gap-2 active:scale-95"
                             >
                               <Plus size={16} />
                               Add Match
@@ -1458,34 +1500,34 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                                       layout
                                       className="bg-bg2 border border-white/5 rounded-3xl overflow-hidden group hover:border-maple/30 transition-all shadow-xl"
                                     >
-                                      <div className="p-8 flex flex-col lg:flex-row items-center gap-10">
+                                      <div className="p-5 sm:p-8 flex flex-col lg:flex-row items-center gap-6 sm:gap-10">
                                         {/* Match Meta */}
                                         <div className="w-full lg:w-56 space-y-4">
                                           <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-muted border border-white/5 group-hover:text-maple transition-colors">
+                                            <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-muted border border-white/5 group-hover:text-maple transition-colors shrink-0">
                                               <Activity size={18} />
                                             </div>
                                             <div>
-                                              <div className="font-ui text-[11px] font-bold text-maple uppercase tracking-[0.2em]">{cat.name}</div>
+                                              <div className="font-ui text-[10px] sm:text-[11px] font-bold text-maple uppercase tracking-[0.2em]">{cat.name}</div>
                                               <div className="flex items-center gap-2 mt-1">
-                                                <span className="font-ui text-[9px] font-bold text-muted uppercase tracking-widest">Match #</span>
+                                                <span className="font-ui text-[8px] sm:text-[9px] font-bold text-muted uppercase tracking-widest">Match #</span>
                                                 <input
                                                   type="number"
                                                   defaultValue={match.match_no}
-                                                  className="w-12 bg-white/5 border border-white/5 rounded-lg text-white text-xs font-bold text-center py-1 outline-none focus:border-maple transition-all"
+                                                  className="w-10 sm:w-12 bg-white/5 border border-white/5 rounded-lg text-white text-[10px] sm:text-xs font-bold text-center py-1 outline-none focus:border-maple transition-all"
                                                   onBlur={(e) => updateMatch(match.id, { match_no: parseInt(e.target.value) })}
                                                 />
                                               </div>
                                             </div>
                                           </div>
-                                          <div className="space-y-3">
+                                          <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-3">
                                             <div className="relative">
                                               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted/30" size={12} />
                                               <input
                                                 type="text"
                                                 defaultValue={match.venue || ''}
                                                 placeholder="Venue"
-                                                className="w-full bg-white/5 border border-white/5 rounded-xl pl-9 pr-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted outline-none focus:border-maple/50 focus:text-text transition-all"
+                                                className="w-full bg-white/5 border border-white/5 rounded-xl pl-9 pr-4 py-2.5 sm:py-3 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-muted outline-none focus:border-maple/50 focus:text-text transition-all"
                                                 onBlur={(e) => updateMatch(match.id, { venue: e.target.value })}
                                               />
                                             </div>
@@ -1495,7 +1537,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                                                 type="text"
                                                 defaultValue={match.eligible_years || ''}
                                                 placeholder="Eligible Years"
-                                                className="w-full bg-white/5 border border-white/5 rounded-xl pl-9 pr-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted outline-none focus:border-maple/50 focus:text-text transition-all"
+                                                className="w-full bg-white/5 border border-white/5 rounded-xl pl-9 pr-4 py-2.5 sm:py-3 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-muted outline-none focus:border-maple/50 focus:text-text transition-all"
                                                 onBlur={(e) => updateMatch(match.id, { eligible_years: e.target.value })}
                                               />
                                             </div>
@@ -1505,7 +1547,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                                                 type="text"
                                                 defaultValue={match.man_of_the_match || ''}
                                                 placeholder="Man of the Match"
-                                                className="w-full bg-white/5 border border-white/5 rounded-xl pl-9 pr-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted outline-none focus:border-maple/50 focus:text-text transition-all"
+                                                className="w-full bg-white/5 border border-white/5 rounded-xl pl-9 pr-4 py-2.5 sm:py-3 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-muted outline-none focus:border-maple/50 focus:text-text transition-all"
                                                 onBlur={(e) => updateMatch(match.id, { man_of_the_match: e.target.value })}
                                               />
                                             </div>
@@ -1513,12 +1555,12 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                                         </div>
 
                                         {/* Teams & Score */}
-                                        <div className="flex-1 flex items-center justify-center gap-8 bg-white/5 p-8 rounded-[2rem] border border-white/5">
-                                          <div className="flex-1 text-right">
+                                        <div className="w-full flex-1 flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-8 bg-white/5 p-6 sm:p-8 rounded-[1.5rem] sm:rounded-[2rem] border border-white/5">
+                                          <div className="w-full sm:flex-1 text-center sm:text-right">
                                             <select
                                               value={match.team1_id || ''}
                                               onChange={(e) => updateMatch(match.id, { team1_id: e.target.value })}
-                                              className="w-full bg-transparent border-none text-xl font-display uppercase tracking-tighter text-right outline-none cursor-pointer hover:text-maple transition-colors"
+                                              className="w-full bg-transparent border-none text-lg sm:text-xl font-display uppercase tracking-tighter text-center sm:text-right outline-none cursor-pointer hover:text-maple transition-colors"
                                             >
                                               {houses.map(h => (
                                                 <option key={h.id} value={h.id} className="bg-[#121214]">{h.name}</option>
@@ -1526,27 +1568,27 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                                             </select>
                                           </div>
 
-                                          <div className="flex flex-col items-center gap-4">
-                                            <div className="flex items-center gap-4">
+                                          <div className="flex flex-row sm:flex-col items-center gap-4">
+                                            <div className="flex items-center gap-3 sm:gap-4">
                                               <input
                                                 type="number"
                                                 value={match.score1}
                                                 onChange={(e) => updateMatch(match.id, { score1: parseInt(e.target.value) })}
-                                                className="w-16 h-16 bg-bg border-2 border-white/10 rounded-2xl text-center text-3xl font-display text-white outline-none focus:border-maple transition-all shadow-inner"
+                                                className="w-12 h-12 sm:w-16 sm:h-16 bg-bg border-2 border-white/10 rounded-xl sm:rounded-2xl text-center text-2xl sm:text-3xl font-display text-white outline-none focus:border-maple transition-all shadow-inner"
                                               />
-                                              <div className="text-muted font-display text-xl opacity-30">VS</div>
+                                              <div className="text-muted font-display text-lg sm:text-xl opacity-30">VS</div>
                                               <input
                                                 type="number"
                                                 value={match.score2}
                                                 onChange={(e) => updateMatch(match.id, { score2: parseInt(e.target.value) })}
-                                                className="w-16 h-16 bg-bg border-2 border-white/10 rounded-2xl text-center text-3xl font-display text-white outline-none focus:border-maple transition-all shadow-inner"
+                                                className="w-12 h-12 sm:w-16 sm:h-16 bg-bg border-2 border-white/10 rounded-xl sm:rounded-2xl text-center text-2xl sm:text-3xl font-display text-white outline-none focus:border-maple transition-all shadow-inner"
                                               />
                                             </div>
                                             <select
                                               value={match.status}
                                               onChange={(e) => updateMatch(match.id, { status: e.target.value as any })}
                                               className={cn(
-                                                "px-4 py-2 rounded-full font-ui text-[9px] font-bold uppercase tracking-widest border transition-all cursor-pointer",
+                                                "px-3 py-1.5 sm:px-4 sm:py-2 rounded-full font-ui text-[8px] sm:text-[9px] font-bold uppercase tracking-widest border transition-all cursor-pointer",
                                                 match.status === 'live' ? "bg-success/10 text-success border-success/30 animate-pulse" :
                                                 match.status === 'completed' ? "bg-muted/10 text-muted border-muted/30" :
                                                 "bg-maple/10 text-maple border-maple/30"
@@ -1558,11 +1600,11 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                                             </select>
                                           </div>
 
-                                          <div className="flex-1 text-left">
+                                          <div className="w-full sm:flex-1 text-center sm:text-left">
                                             <select
                                               value={match.team2_id || ''}
                                               onChange={(e) => updateMatch(match.id, { team2_id: e.target.value })}
-                                              className="w-full bg-transparent border-none text-xl font-display uppercase tracking-tighter text-left outline-none cursor-pointer hover:text-maple transition-colors"
+                                              className="w-full bg-transparent border-none text-lg sm:text-xl font-display uppercase tracking-tighter text-center sm:text-left outline-none cursor-pointer hover:text-maple transition-colors"
                                             >
                                               {houses.map(h => (
                                                 <option key={h.id} value={h.id} className="bg-[#121214]">{h.name}</option>
@@ -1572,15 +1614,15 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                                         </div>
 
                                         {/* Actions */}
-                                        <div className="flex lg:flex-col gap-3">
+                                        <div className="flex flex-row lg:flex-col gap-3 w-full lg:w-auto justify-center">
                                           <button 
                                             onClick={() => deleteMatch(match.id)}
-                                            className="w-12 h-12 bg-danger/5 hover:bg-danger text-danger hover:text-white rounded-2xl transition-all border border-danger/10 flex items-center justify-center active:scale-90"
+                                            className="w-10 h-10 sm:w-12 sm:h-12 bg-danger/5 hover:bg-danger text-danger hover:text-white rounded-xl sm:rounded-2xl transition-all border border-danger/10 flex items-center justify-center active:scale-90"
                                             title="Delete Match"
                                           >
                                             <Trash2 size={20} />
                                           </button>
-                                          <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-muted/30 border border-white/5">
+                                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/5 rounded-xl sm:rounded-2xl flex items-center justify-center text-muted/30 border border-white/5">
                                             <Edit2 size={20} />
                                           </div>
                                         </div>
@@ -1753,14 +1795,14 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                   exit={{ opacity: 0, x: -20 }}
                   className="space-y-16 pb-20"
                 >
-                  <div className="flex items-center justify-between bg-bg2 p-10 rounded-[3rem] border border-white/5 shadow-2xl">
-                    <div>
-                      <h2 className="text-4xl font-display uppercase tracking-tighter text-white">Event Categories</h2>
+                  <div className="flex flex-col sm:flex-row items-center justify-between bg-bg2 p-6 sm:p-10 rounded-[2rem] sm:rounded-[3rem] border border-white/5 shadow-2xl gap-6">
+                    <div className="text-center sm:text-left">
+                      <h2 className="text-3xl sm:text-4xl font-display uppercase tracking-tighter text-white">Event Categories</h2>
                       <p className="text-muted text-[10px] font-bold uppercase tracking-[0.3em] mt-3 opacity-60">Define sports and cultural event specifications</p>
                     </div>
                     <button 
                       onClick={addCategory}
-                      className="bg-maple hover:bg-maple/90 text-bg py-5 px-12 rounded-2xl font-ui text-[11px] font-bold uppercase tracking-[0.2em] transition-all shadow-xl shadow-maple/20 flex items-center gap-3 group active:scale-95"
+                      className="w-full sm:w-auto bg-maple hover:bg-maple/90 text-bg py-4 sm:py-5 px-8 sm:px-12 rounded-2xl font-ui text-[11px] font-bold uppercase tracking-[0.2em] transition-all shadow-xl shadow-maple/20 flex items-center justify-center gap-3 group active:scale-95"
                     >
                       <Plus size={20} className="group-hover:rotate-90 transition-transform" />
                       Add Category
@@ -1809,12 +1851,12 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                   exit={{ opacity: 0, x: -20 }}
                   className="space-y-12 pb-20"
                 >
-                  <div className="flex items-center justify-between bg-[#0d1b33] p-10 rounded-[3rem] border border-white/5 shadow-2xl">
-                    <div>
-                      <h2 className="text-4xl font-display uppercase tracking-tighter text-white">Media Gallery</h2>
+                  <div className="flex flex-col sm:flex-row items-center justify-between bg-[#0d1b33] p-6 sm:p-10 rounded-[2rem] sm:rounded-[3rem] border border-white/5 shadow-2xl gap-6">
+                    <div className="text-center sm:text-left">
+                      <h2 className="text-2xl sm:text-4xl font-display uppercase tracking-tighter text-white">Media Gallery</h2>
                       <p className="text-muted text-[10px] font-bold uppercase tracking-[0.3em] mt-3 opacity-60">Manage photos and videos for the gallery</p>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-4 w-full sm:w-auto">
                       <input 
                         type="file" 
                         id="gallery-multi-upload" 
@@ -1826,7 +1868,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                       <button 
                         onClick={() => document.getElementById('gallery-multi-upload')?.click()}
                         disabled={loading}
-                        className="bg-maple hover:bg-maple/90 text-bg py-5 px-12 rounded-2xl font-ui text-[11px] font-bold uppercase tracking-[0.2em] transition-all shadow-xl shadow-maple/20 flex items-center gap-3 group active:scale-95 disabled:opacity-50"
+                        className="w-full sm:w-auto bg-maple hover:bg-maple/90 text-bg py-4 sm:py-5 px-8 sm:px-12 rounded-2xl font-ui text-[11px] font-bold uppercase tracking-[0.2em] transition-all shadow-xl shadow-maple/20 flex items-center justify-center gap-3 group active:scale-95 disabled:opacity-50"
                       >
                         <Upload size={20} className="group-hover:-translate-y-1 transition-transform" />
                         {loading ? 'Uploading...' : 'Mass Upload'}
@@ -1834,12 +1876,12 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-10">
                     {gallery.map((item) => (
                       <motion.div 
                         key={item.id}
                         layout
-                        className="bg-[#0d1b33] border border-white/5 rounded-[3rem] overflow-hidden group hover:border-maple/30 transition-all shadow-2xl"
+                        className="bg-[#0d1b33] border border-white/5 rounded-[2rem] sm:rounded-[3rem] overflow-hidden group hover:border-maple/30 transition-all shadow-2xl"
                       >
                         <div className="aspect-video relative overflow-hidden">
                           <img src={item.url} alt={item.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
@@ -1899,36 +1941,42 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                   exit={{ opacity: 0, x: -20 }}
                   className="space-y-12 pb-20"
                 >
-                  <div className="flex items-center justify-between bg-[#0d1b33] p-10 rounded-[3rem] border border-white/5 shadow-2xl">
-                    <div>
-                      <h2 className="text-4xl font-display uppercase tracking-tighter text-white">House Leaderboards</h2>
+                  <div className="flex flex-col sm:flex-row items-center justify-between bg-[#0d1b33] p-6 sm:p-10 rounded-[2rem] sm:rounded-[3rem] border border-white/5 shadow-2xl gap-6">
+                    <div className="text-center sm:text-left">
+                      <h2 className="text-2xl sm:text-4xl font-display uppercase tracking-tighter text-white">House Leaderboards</h2>
                       <p className="text-muted text-[10px] font-bold uppercase tracking-[0.3em] mt-3 opacity-60">Real-time house standings and point distribution</p>
                     </div>
                     <button 
                       onClick={() => supabase?.rpc('recompute_points').then(() => refresh())}
-                      className="bg-maple hover:bg-maple/90 text-bg py-5 px-12 rounded-2xl font-ui text-[11px] font-bold uppercase tracking-[0.2em] transition-all shadow-xl shadow-maple/20 flex items-center gap-3 group active:scale-95"
+                      className="w-full sm:w-auto bg-maple hover:bg-maple/90 text-bg py-4 sm:py-5 px-8 sm:px-12 rounded-2xl font-ui text-[11px] font-bold uppercase tracking-[0.2em] transition-all shadow-xl shadow-maple/20 flex items-center justify-center gap-3 group active:scale-95"
                     >
                       <RefreshCw size={20} className="group-hover:rotate-180 transition-transform duration-500" />
                       Recompute Points
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 gap-6">
+                  <div className="grid grid-cols-1 gap-4 sm:gap-6">
                     {houses.sort((a, b) => (b.points || 0) - (a.points || 0)).map((house, idx) => (
-                      <div key={house.id} className="bg-[#0d1b33] border border-white/5 rounded-[2.5rem] p-8 flex items-center gap-10 group hover:border-maple/30 transition-all shadow-2xl">
-                        <div className="w-20 h-20 bg-white/5 rounded-[1.5rem] flex items-center justify-center font-display text-4xl text-maple border border-white/5 shadow-inner">
-                          #{idx + 1}
+                      <div key={house.id} className="bg-[#0d1b33] border border-white/5 rounded-[1.5rem] sm:rounded-[2.5rem] p-5 sm:p-8 flex flex-col sm:flex-row items-center gap-6 sm:gap-10 group hover:border-maple/30 transition-all shadow-2xl">
+                        <div className="flex items-center gap-4 sm:gap-6 w-full sm:w-auto">
+                          <div className="w-14 h-14 sm:w-20 sm:h-20 bg-white/5 rounded-[1rem] sm:rounded-[1.5rem] flex items-center justify-center font-display text-xl sm:text-4xl text-maple border border-white/5 shadow-inner shrink-0">
+                            #{idx + 1}
+                          </div>
+                          <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-[1rem] sm:rounded-[1.5rem] overflow-hidden border border-white/5 shadow-inner shrink-0">
+                            <img src={house.logo_url} alt={house.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          </div>
+                          <div className="flex-1 sm:hidden">
+                            <h3 className="text-lg font-display uppercase tracking-widest text-white">{house.name}</h3>
+                            <p className="font-ui text-[8px] font-bold text-muted uppercase tracking-[0.4em] mt-1">{house.motto || 'Striving for Excellence'}</p>
+                          </div>
                         </div>
-                        <div className="w-20 h-20 rounded-[1.5rem] overflow-hidden border border-white/5 shadow-inner">
-                          <img src={house.logo_url} alt={house.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="text-3xl font-display uppercase tracking-widest text-white">{house.name}</h3>
+                        <div className="hidden sm:block flex-1">
+                          <h3 className="text-2xl sm:text-3xl font-display uppercase tracking-widest text-white">{house.name}</h3>
                           <p className="font-ui text-[10px] font-bold text-muted uppercase tracking-[0.4em] mt-2">{house.motto || 'Striving for Excellence'}</p>
                         </div>
-                        <div className="text-right">
-                          <div className="text-5xl font-display text-maple tracking-tighter">{house.points || 0}</div>
-                          <div className="font-ui text-[10px] font-bold text-muted uppercase tracking-[0.3em] mt-1">Total Points</div>
+                        <div className="text-center sm:text-right w-full sm:w-auto border-t sm:border-t-0 border-white/5 pt-4 sm:pt-0">
+                          <div className="text-3xl sm:text-5xl font-display text-maple tracking-tighter">{house.points || 0}</div>
+                          <div className="font-ui text-[8px] sm:text-[10px] font-bold text-muted uppercase tracking-[0.3em] mt-1">Total Points</div>
                         </div>
                       </div>
                     ))}
@@ -1942,25 +1990,25 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  className="h-[calc(100vh-200px)] flex flex-col gap-8"
+                  className="h-[calc(100vh-250px)] sm:h-[calc(100vh-200px)] flex flex-col gap-6 sm:gap-8"
                 >
-                  <div className="flex items-center justify-between bg-[#0d1b33] p-10 rounded-[3rem] border border-white/5 shadow-2xl">
+                  <div className="flex flex-col sm:flex-row items-center justify-between bg-[#0d1b33] p-6 sm:p-10 rounded-[2rem] sm:rounded-[3rem] border border-white/5 shadow-2xl gap-6">
                     <div>
-                      <h2 className="text-4xl font-display uppercase tracking-tighter text-white">Data Spreadsheet</h2>
+                      <h2 className="text-2xl sm:text-4xl font-display uppercase tracking-tighter text-white">Data Spreadsheet</h2>
                       <p className="text-muted text-[10px] font-bold uppercase tracking-[0.3em] mt-3 opacity-60">Embedded Google Sheet for detailed management</p>
                     </div>
                     <a 
                       href={localSettings['spreadsheet_url'] || '#'} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="bg-white/5 hover:bg-white/10 text-white py-5 px-12 rounded-2xl font-ui text-[11px] font-bold uppercase tracking-[0.2em] transition-all border border-white/10 flex items-center gap-3 group active:scale-95"
+                      className="w-full sm:w-auto bg-white/5 hover:bg-white/10 text-white py-4 sm:py-5 px-8 sm:px-12 rounded-2xl font-ui text-[11px] font-bold uppercase tracking-[0.2em] transition-all border border-white/10 flex items-center justify-center gap-3 group active:scale-95"
                     >
-                      <ExternalLink size={20} />
+                      <ExternalLink size={18} />
                       Open Full Sheet
                     </a>
                   </div>
                   
-                  <div className="flex-1 bg-[#0d1b33] border border-white/5 rounded-[3rem] overflow-hidden shadow-2xl relative">
+                  <div className="flex-1 bg-[#0d1b33] border border-white/5 rounded-[2rem] sm:rounded-[3rem] overflow-hidden shadow-2xl relative min-h-[400px]">
                     {localSettings['spreadsheet_url'] ? (
                       <iframe 
                         src={getEmbedUrl(localSettings['spreadsheet_url'])} 
@@ -1985,9 +2033,9 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                   exit={{ opacity: 0, x: -20 }}
                   className="space-y-12 pb-20"
                 >
-                  <div className="flex items-center justify-between bg-[#0d1b33] p-10 rounded-[3rem] border border-white/5 shadow-2xl">
-                    <div>
-                      <h2 className="text-4xl font-display uppercase tracking-tighter text-white">Notices & Bulletins</h2>
+                  <div className="flex flex-col sm:flex-row items-center justify-between bg-[#0d1b33] p-6 sm:p-10 rounded-[2rem] sm:rounded-[3rem] border border-white/5 shadow-2xl gap-6">
+                    <div className="text-center sm:text-left">
+                      <h2 className="text-2xl sm:text-4xl font-display uppercase tracking-tighter text-white">Notices & Bulletins</h2>
                       <p className="text-muted text-[10px] font-bold uppercase tracking-[0.3em] mt-3 opacity-60">Broadcast important information to all participants</p>
                     </div>
                     <button 
@@ -1995,19 +2043,19 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                         setNoticeModal({ isOpen: true });
                         setNoticeFormData({ title: '', content: '', priority: 'low' });
                       }}
-                      className="bg-maple hover:bg-maple/90 text-bg py-5 px-12 rounded-2xl font-ui text-[11px] font-bold uppercase tracking-[0.2em] transition-all shadow-xl shadow-maple/20 flex items-center gap-3 group active:scale-95"
+                      className="w-full sm:w-auto bg-maple hover:bg-maple/90 text-bg py-4 sm:py-5 px-8 sm:px-12 rounded-2xl font-ui text-[11px] font-bold uppercase tracking-[0.2em] transition-all shadow-xl shadow-maple/20 flex items-center justify-center gap-3 group active:scale-95"
                     >
                       <Plus size={20} className="group-hover:rotate-90 transition-transform" />
                       Create Notice
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-10">
                     {notices.map(notice => (
                       <motion.div 
                         key={notice.id} 
                         layout
-                        className="bg-[#0d1b33] border border-white/5 rounded-[3rem] p-10 shadow-2xl group hover:border-maple/30 transition-all flex flex-col relative overflow-hidden"
+                        className="bg-[#0d1b33] border border-white/5 rounded-[1.5rem] sm:rounded-[3rem] p-5 sm:p-10 shadow-2xl group hover:border-maple/30 transition-all flex flex-col relative overflow-hidden"
                       >
                         {/* Priority Accent */}
                         <div className={cn(
@@ -2083,15 +2131,15 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                   exit={{ opacity: 0, x: -20 }}
                   className="space-y-12 pb-20"
                 >
-                  <div className="flex items-center justify-between bg-[#0d1b33] p-10 rounded-[3rem] border border-white/5 shadow-2xl">
-                    <div>
-                      <h2 className="text-4xl font-display uppercase tracking-tighter text-white">General Settings</h2>
+                  <div className="flex flex-col sm:flex-row items-center justify-between bg-[#0d1b33] p-6 sm:p-10 rounded-[2rem] sm:rounded-[3rem] border border-white/5 shadow-2xl gap-6">
+                    <div className="text-center sm:text-left">
+                      <h2 className="text-2xl sm:text-4xl font-display uppercase tracking-tighter text-white">General Settings</h2>
                       <p className="text-muted text-[10px] font-bold uppercase tracking-[0.3em] mt-3 opacity-60">Configure global application parameters and social links</p>
                     </div>
                     {hasChanges && (
                       <button 
                         onClick={saveAllSettings}
-                        className="bg-maple hover:bg-maple/90 text-bg py-5 px-12 rounded-2xl font-ui text-[11px] font-bold uppercase tracking-[0.2em] transition-all shadow-xl shadow-maple/20 flex items-center gap-3 group active:scale-95"
+                        className="w-full sm:w-auto bg-maple hover:bg-maple/90 text-bg py-4 sm:py-5 px-8 sm:px-12 rounded-2xl font-ui text-[11px] font-bold uppercase tracking-[0.2em] transition-all shadow-xl shadow-maple/20 flex items-center justify-center gap-3 group active:scale-95"
                       >
                         <Save size={20} className="group-hover:scale-110 transition-transform" />
                         Save Changes
@@ -2099,64 +2147,64 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-10">
                     {/* Core Info */}
-                    <div className="bg-[#0d1b33] border border-white/5 rounded-[3rem] p-12 space-y-10 shadow-2xl relative overflow-hidden">
+                    <div className="bg-[#0d1b33] border border-white/5 rounded-[1.5rem] sm:rounded-[3rem] p-5 sm:p-12 space-y-6 sm:space-y-10 shadow-2xl relative overflow-hidden">
                       <div className="absolute top-0 left-0 w-full h-1.5 bg-maple/30" />
-                      <div className="flex items-center gap-6 pb-8 border-b border-white/5">
-                        <div className="w-16 h-16 bg-maple/10 rounded-[1.5rem] flex items-center justify-center text-maple shadow-inner">
-                          <SettingsIcon size={32} />
+                      <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 pb-6 sm:pb-8 border-b border-white/5">
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-maple/10 rounded-[1rem] sm:rounded-[1.5rem] flex items-center justify-center text-maple shadow-inner shrink-0">
+                          <SettingsIcon size={24} />
                         </div>
-                        <div>
-                          <h3 className="text-2xl font-display uppercase tracking-tighter text-white">Core Configuration</h3>
-                          <p className="text-muted text-[9px] font-bold uppercase tracking-[0.2em] mt-1 opacity-40">Basic festival information</p>
+                        <div className="text-center sm:text-left">
+                          <h3 className="text-xl sm:text-2xl font-display uppercase tracking-tighter text-white">Core Configuration</h3>
+                          <p className="text-muted text-[8px] sm:text-[9px] font-bold uppercase tracking-[0.2em] mt-1 opacity-40">Basic festival information</p>
                         </div>
                       </div>
 
-                      <div className="space-y-8">
-                        <div className="space-y-3">
-                          <label className="font-ui text-[10px] font-bold text-muted uppercase tracking-[0.3em] ml-1">Festival Name</label>
+                      <div className="space-y-6 sm:space-y-8">
+                        <div className="space-y-2 sm:space-y-3">
+                          <label className="font-ui text-[9px] sm:text-[10px] font-bold text-muted uppercase tracking-[0.3em] ml-1">Festival Name</label>
                           <input
                             type="text"
                             value={localSettings['festival_name'] || ''}
-                            className="w-full bg-white/5 border border-white/5 rounded-2xl px-8 py-5 text-[13px] font-bold text-white outline-none focus:border-maple/50 transition-all shadow-inner"
+                            className="w-full bg-white/5 border border-white/5 rounded-xl sm:rounded-2xl px-5 sm:px-8 py-4 sm:py-5 text-[12px] sm:text-[13px] font-bold text-white outline-none focus:border-maple/50 transition-all shadow-inner"
                             onChange={(e) => handleSettingChange('festival_name', e.target.value)}
                           />
                         </div>
-                        <div className="space-y-3">
-                          <label className="font-ui text-[10px] font-bold text-muted uppercase tracking-[0.3em] ml-1">Contact Email</label>
+                        <div className="space-y-2 sm:space-y-3">
+                          <label className="font-ui text-[9px] sm:text-[10px] font-bold text-muted uppercase tracking-[0.3em] ml-1">Contact Email</label>
                           <input
                             type="email"
                             value={localSettings['contact_email'] || ''}
-                            className="w-full bg-white/5 border border-white/5 rounded-2xl px-8 py-5 text-[13px] font-bold text-white outline-none focus:border-maple/50 transition-all shadow-inner"
+                            className="w-full bg-white/5 border border-white/5 rounded-xl sm:rounded-2xl px-5 sm:px-8 py-4 sm:py-5 text-[12px] sm:text-[13px] font-bold text-white outline-none focus:border-maple/50 transition-all shadow-inner"
                             onChange={(e) => handleSettingChange('contact_email', e.target.value)}
                           />
                         </div>
-                        <div className="space-y-3">
-                          <label className="font-ui text-[10px] font-bold text-muted uppercase tracking-[0.3em] ml-1">School Logo</label>
-                          <div className="flex items-center gap-6">
-                            <div className="w-24 h-24 bg-white/5 rounded-[2rem] flex items-center justify-center border border-white/5 overflow-hidden shadow-inner group/logo relative">
+                        <div className="space-y-2 sm:space-y-3">
+                          <label className="font-ui text-[9px] sm:text-[10px] font-bold text-muted uppercase tracking-[0.3em] ml-1">School Logo</label>
+                          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+                            <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white/5 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center border border-white/5 overflow-hidden shadow-inner group/logo relative shrink-0">
                               {localSettings['school_logo_url'] ? (
-                                <img src={localSettings['school_logo_url']} alt="School Logo" className="w-full h-full object-contain p-4" referrerPolicy="no-referrer" />
+                                <img src={localSettings['school_logo_url']} alt="School Logo" className="w-full h-full object-contain p-3 sm:p-4" referrerPolicy="no-referrer" />
                               ) : (
-                                <ImageIcon size={32} className="text-muted/20" />
+                                <ImageIcon size={28} className="text-muted/20" />
                               )}
                               <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/logo:opacity-100 flex items-center justify-center transition-opacity cursor-pointer" onClick={() => document.getElementById('school-logo-upload')?.click()}>
                                 <Upload size={20} className="text-white" />
                               </div>
                             </div>
-                            <div className="flex-1 space-y-3">
-                              <div className="flex gap-3">
+                            <div className="flex-1 space-y-3 w-full">
+                              <div className="flex gap-2 sm:gap-3">
                                 <input
                                   type="text"
                                   value={localSettings['school_logo_url'] || ''}
-                                  className="flex-1 bg-white/5 border border-white/5 rounded-2xl px-6 py-4 text-[11px] font-bold text-white outline-none focus:border-maple/50 transition-all shadow-inner"
+                                  className="flex-1 bg-white/5 border border-white/5 rounded-xl sm:rounded-2xl px-4 sm:px-6 py-3 sm:py-4 text-[10px] sm:text-[11px] font-bold text-white outline-none focus:border-maple/50 transition-all shadow-inner min-w-0"
                                   placeholder="Logo URL..."
                                   onChange={(e) => handleSettingChange('school_logo_url', e.target.value)}
                                 />
                                 <button 
                                   onClick={() => document.getElementById('school-logo-upload')?.click()}
-                                  className="bg-white/5 hover:bg-white/10 text-white p-4 rounded-2xl border border-white/5 transition-all active:scale-90 shadow-lg"
+                                  className="bg-white/5 hover:bg-white/10 text-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-white/5 transition-all active:scale-90 shadow-lg shrink-0"
                                   title="Upload Logo"
                                 >
                                   <Upload size={20} />
@@ -2184,16 +2232,16 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                                   }}
                                 />
                               </div>
-                              <p className="text-[9px] text-muted uppercase tracking-[0.2em] ml-1 opacity-40">Upload a file or provide a direct URL</p>
+                              <p className="text-[8px] sm:text-[9px] text-muted uppercase tracking-[0.2em] ml-1 opacity-40">Upload a file or provide a direct URL</p>
                             </div>
                           </div>
                         </div>
-                        <div className="space-y-3">
-                          <label className="font-ui text-[10px] font-bold text-muted uppercase tracking-[0.3em] ml-1">Master Spreadsheet URL</label>
+                        <div className="space-y-2 sm:space-y-3">
+                          <label className="font-ui text-[9px] sm:text-[10px] font-bold text-muted uppercase tracking-[0.3em] ml-1">Master Spreadsheet URL</label>
                           <input
                             type="text"
                             value={localSettings['spreadsheet_url'] || ''}
-                            className="w-full bg-white/5 border border-white/5 rounded-2xl px-8 py-5 text-[13px] font-bold text-white outline-none focus:border-maple/50 transition-all shadow-inner"
+                            className="w-full bg-white/5 border border-white/5 rounded-xl sm:rounded-2xl px-5 sm:px-8 py-4 sm:py-5 text-[12px] sm:text-[13px] font-bold text-white outline-none focus:border-maple/50 transition-all shadow-inner"
                             placeholder="https://docs.google.com/spreadsheets/..."
                             onChange={(e) => handleSettingChange('spreadsheet_url', e.target.value)}
                           />
@@ -2202,34 +2250,34 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                     </div>
 
                     {/* Status & Announcements */}
-                    <div className="bg-[#0d1b33] border border-white/5 rounded-[3rem] p-12 space-y-10 shadow-2xl relative overflow-hidden">
+                    <div className="bg-[#0d1b33] border border-white/5 rounded-[1.5rem] sm:rounded-[3rem] p-5 sm:p-12 space-y-6 sm:space-y-10 shadow-2xl relative overflow-hidden">
                       <div className="absolute top-0 left-0 w-full h-1.5 bg-maple/30" />
-                      <div className="flex items-center gap-6 pb-8 border-b border-white/5">
-                        <div className="w-16 h-16 bg-maple/10 rounded-[1.5rem] flex items-center justify-center text-maple shadow-inner">
-                          <Activity size={32} />
+                      <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 pb-6 sm:pb-8 border-b border-white/5">
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-maple/10 rounded-[1rem] sm:rounded-[1.5rem] flex items-center justify-center text-maple shadow-inner shrink-0">
+                          <Activity size={24} />
                         </div>
-                        <div>
-                          <h3 className="text-2xl font-display uppercase tracking-tighter text-white">Announcements</h3>
-                          <p className="text-muted text-[9px] font-bold uppercase tracking-[0.2em] mt-1 opacity-40">Global messaging & footer</p>
+                        <div className="text-center sm:text-left">
+                          <h3 className="text-xl sm:text-2xl font-display uppercase tracking-tighter text-white">Announcements</h3>
+                          <p className="text-muted text-[8px] sm:text-[9px] font-bold uppercase tracking-[0.2em] mt-1 opacity-40">Global messaging & footer</p>
                         </div>
                       </div>
 
-                      <div className="space-y-8">
-                        <div className="space-y-3">
-                          <label className="font-ui text-[10px] font-bold text-muted uppercase tracking-[0.3em] ml-1">Global Announcement Banner</label>
+                      <div className="space-y-6 sm:space-y-8">
+                        <div className="space-y-2 sm:space-y-3">
+                          <label className="font-ui text-[9px] sm:text-[10px] font-bold text-muted uppercase tracking-[0.3em] ml-1">Global Announcement Banner</label>
                           <textarea
                             value={localSettings['announcement_text'] || ''}
-                            className="w-full bg-white/5 border border-white/5 rounded-[2rem] px-8 py-6 text-[13px] font-bold text-white outline-none focus:border-maple/50 transition-all min-h-[160px] resize-none shadow-inner leading-relaxed"
+                            className="w-full bg-white/5 border border-white/5 rounded-[1.5rem] sm:rounded-[2rem] px-5 sm:px-8 py-4 sm:py-6 text-[12px] sm:text-[13px] font-bold text-white outline-none focus:border-maple/50 transition-all min-h-[120px] sm:min-h-[160px] resize-none shadow-inner leading-relaxed"
                             placeholder="Enter global announcement..."
                             onChange={(e) => handleSettingChange('announcement_text', e.target.value)}
                           />
                         </div>
-                        <div className="space-y-3">
-                          <label className="font-ui text-[10px] font-bold text-muted uppercase tracking-[0.3em] ml-1">Footer Copyright Text</label>
+                        <div className="space-y-2 sm:space-y-3">
+                          <label className="font-ui text-[9px] sm:text-[10px] font-bold text-muted uppercase tracking-[0.3em] ml-1">Footer Copyright Text</label>
                           <input
                             type="text"
                             value={localSettings['footer_text'] || ''}
-                            className="w-full bg-white/5 border border-white/5 rounded-2xl px-8 py-5 text-[13px] font-bold text-white outline-none focus:border-maple/50 transition-all shadow-inner"
+                            className="w-full bg-white/5 border border-white/5 rounded-xl sm:rounded-2xl px-5 sm:px-8 py-4 sm:py-5 text-[12px] sm:text-[13px] font-bold text-white outline-none focus:border-maple/50 transition-all shadow-inner"
                             placeholder="e.g. © 2026 UCSF. All rights reserved."
                             onChange={(e) => handleSettingChange('footer_text', e.target.value)}
                           />
@@ -2238,14 +2286,14 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                     </div>
 
                     {/* Social Media */}
-                    <div className="bg-[#0d1b33] border border-white/5 rounded-[3rem] p-12 space-y-10 shadow-2xl lg:col-span-2 relative overflow-hidden">
+                    <div className="bg-[#0d1b33] border border-white/5 rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-12 space-y-8 sm:space-y-10 shadow-2xl lg:col-span-2 relative overflow-hidden">
                       <div className="absolute top-0 left-0 w-full h-1.5 bg-maple/30" />
-                      <div className="flex items-center gap-6 pb-8 border-b border-white/5">
-                        <div className="w-16 h-16 bg-maple/10 rounded-[1.5rem] flex items-center justify-center text-maple shadow-inner">
-                          <Share2 size={32} />
+                      <div className="flex flex-col sm:flex-row items-center gap-6 pb-8 border-b border-white/5">
+                        <div className="w-12 h-12 sm:w-16 sm:h-16 bg-maple/10 rounded-[1.2rem] sm:rounded-[1.5rem] flex items-center justify-center text-maple shadow-inner">
+                          <Share2 size={24} />
                         </div>
-                        <div>
-                          <h3 className="text-2xl font-display uppercase tracking-tighter text-white">Social & External Links</h3>
+                        <div className="text-center sm:text-left">
+                          <h3 className="text-xl sm:text-2xl font-display uppercase tracking-tighter text-white">Social & External Links</h3>
                           <p className="text-muted text-[9px] font-bold uppercase tracking-[0.2em] mt-1 opacity-40">Connect your community</p>
                         </div>
                       </div>
@@ -2305,32 +2353,32 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                   exit={{ opacity: 0, x: -20 }}
                   className="space-y-12"
                 >
-                  <div className="flex justify-between items-end">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6">
                     <div>
-                      <h2 className="text-5xl font-display uppercase tracking-tighter text-white">Pending Approvals</h2>
+                      <h2 className="text-3xl sm:text-5xl font-display uppercase tracking-tighter text-white">Pending Approvals</h2>
                       <p className="text-muted mt-2 font-sans text-[10px] font-bold uppercase tracking-[0.3em]">Review and confirm changes submitted by other admins</p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 gap-6">
                     {stagedChanges.filter(c => c.status === 'pending').length === 0 ? (
-                      <div className="bg-bg2 border border-white/5 rounded-[3rem] p-20 flex flex-col items-center justify-center text-center space-y-6">
-                        <div className="w-24 h-24 bg-white/5 rounded-[2rem] flex items-center justify-center text-muted/20">
+                      <div className="bg-bg2 border border-white/5 rounded-[2rem] sm:rounded-[3rem] p-12 sm:p-20 flex flex-col items-center justify-center text-center space-y-6">
+                        <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white/5 rounded-[1.5rem] sm:rounded-[2rem] flex items-center justify-center text-muted/20">
                           <CheckCircle size={48} />
                         </div>
                         <div className="space-y-2">
-                          <h3 className="text-2xl font-display uppercase tracking-tighter text-white">All Caught Up!</h3>
+                          <h3 className="text-xl sm:text-2xl font-display uppercase tracking-tighter text-white">All Caught Up!</h3>
                           <p className="text-muted text-[10px] font-bold uppercase tracking-widest">No pending changes require your approval.</p>
                         </div>
                       </div>
                     ) : (
                       stagedChanges.filter(c => c.status === 'pending').map((change) => (
-                        <div key={change.id} className="bg-bg2 border border-white/5 rounded-[2rem] p-8 flex flex-col md:flex-row gap-8 items-start md:items-center group hover:border-maple/30 transition-all">
-                          <div className="w-16 h-16 bg-white/5 rounded-2xl flex items-center justify-center text-maple flex-shrink-0">
+                        <div key={change.id} className="bg-bg2 border border-white/5 rounded-[1.5rem] sm:rounded-[2rem] p-5 sm:p-8 flex flex-col xl:flex-row gap-6 sm:gap-8 items-start xl:items-center group hover:border-maple/30 transition-all">
+                          <div className="w-12 h-12 sm:w-16 sm:h-16 bg-white/5 rounded-xl sm:rounded-2xl flex items-center justify-center text-maple flex-shrink-0">
                             <History size={24} />
                           </div>
                           
-                          <div className="flex-1 space-y-2">
+                          <div className="flex-1 space-y-2 w-full">
                             <div className="flex items-center gap-3">
                               <span className="px-3 py-1 bg-maple/10 text-maple text-[8px] font-bold uppercase tracking-widest rounded-lg border border-maple/20">
                                 {change.table_name}
@@ -2339,27 +2387,27 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                                 ID: {change.record_id}
                               </span>
                             </div>
-                            <h4 className="text-lg font-display uppercase text-white">
+                            <h4 className="text-base sm:text-lg font-display uppercase text-white">
                               Change by <span className="text-maple">{change.created_by_email}</span>
                             </h4>
-                            <div className="bg-black/20 p-4 rounded-xl font-mono text-[10px] text-muted/80 overflow-x-auto">
+                            <div className="bg-black/20 p-4 rounded-xl font-mono text-[9px] sm:text-[10px] text-muted/80 overflow-x-auto max-w-full">
                               <pre>{JSON.stringify(change.updates, null, 2)}</pre>
                             </div>
-                            <p className="text-[9px] text-muted/40 font-bold uppercase tracking-widest">
+                            <p className="text-[8px] sm:text-[9px] text-muted/40 font-bold uppercase tracking-widest">
                               Submitted {new Date(change.created_at).toLocaleString()}
                             </p>
                           </div>
-
-                          <div className="flex gap-3 w-full md:w-auto">
+                          
+                          <div className="flex flex-row xl:flex-col gap-3 w-full xl:w-auto">
                             <button 
                               onClick={() => approveChange(change)}
-                              className="flex-1 md:flex-none px-6 py-4 bg-success/10 hover:bg-success text-success hover:text-bg font-ui text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all border border-success/20 flex items-center justify-center gap-2"
+                              className="flex-1 xl:flex-none px-4 sm:px-6 py-3 sm:py-4 bg-success/10 hover:bg-success text-success hover:text-bg font-ui text-[9px] sm:text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all border border-success/20 flex items-center justify-center gap-2"
                             >
                               <CheckCircle size={14} /> Approve
                             </button>
                             <button 
                               onClick={() => discardStagedChange(change.id)}
-                              className="flex-1 md:flex-none px-6 py-4 bg-danger/10 hover:bg-danger text-danger hover:text-white font-ui text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all border border-danger/20 flex items-center justify-center gap-2"
+                              className="flex-1 xl:flex-none px-4 sm:px-6 py-3 sm:py-4 bg-danger/10 hover:bg-danger text-danger hover:text-white font-ui text-[9px] sm:text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all border border-danger/20 flex items-center justify-center gap-2"
                             >
                               <X size={14} /> Discard
                             </button>
@@ -2379,20 +2427,20 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
       {/* Notice Modal */}
       <AnimatePresence>
         {noticeModal?.isOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-bg/80 backdrop-blur-md">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-bg/80 backdrop-blur-md overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="w-full max-w-lg bg-[#0d1b33] border border-white/10 rounded-[3rem] p-12 shadow-2xl space-y-10 relative overflow-hidden"
+              className="w-full max-w-lg bg-[#0d1b33] border border-white/10 rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-12 shadow-2xl space-y-8 sm:space-y-10 relative overflow-hidden my-auto"
             >
               <div className="absolute top-0 left-0 w-full h-1.5 bg-maple/30" />
-              <div className="flex items-center gap-6 pb-8 border-b border-white/5">
-                <div className="w-16 h-16 bg-maple/10 rounded-[1.5rem] flex items-center justify-center text-maple shadow-inner">
-                  <Bell size={32} />
+              <div className="flex flex-col sm:flex-row items-center gap-6 pb-8 border-b border-white/5">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 bg-maple/10 rounded-[1.2rem] sm:rounded-[1.5rem] flex items-center justify-center text-maple shadow-inner">
+                  <Bell size={24} />
                 </div>
-                <div>
-                  <h3 className="text-3xl font-display uppercase tracking-tighter text-white">
+                <div className="text-center sm:text-left">
+                  <h3 className="text-2xl sm:text-3xl font-display uppercase tracking-tighter text-white">
                     {noticeModal.notice ? 'Edit Notice' : 'Create Notice'}
                   </h3>
                   <p className="text-muted text-[9px] font-bold uppercase tracking-[0.2em] mt-1 opacity-40">Broadcast to all participants</p>
