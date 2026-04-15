@@ -3,7 +3,6 @@ import Layout from './components/Layout';
 import MatchCard from './components/MatchCard';
 import ScheduleCard from './components/ScheduleCard';
 import EventsSection from './components/EventsSection';
-import AdminPanel from './components/AdminPanel';
 import { useUCSFData } from './hooks/useUCSFData';
 import { Match } from './types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -98,14 +97,42 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-bg-dark gap-6">
-        <div className="relative">
-          <div className="w-16 h-16 border-4 border-maple/20 border-t-maple rounded-full animate-spin" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Trophy className="text-maple" size={24} />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-bg-dark relative overflow-hidden">
+        {/* Background Orbs */}
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-ebony opacity-[0.1] blur-[120px] rounded-full animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-maple opacity-[0.1] blur-[120px] rounded-full animate-pulse" />
+        
+        <div className="relative z-10 flex flex-col items-center gap-12">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative"
+          >
+            <div className="w-24 h-24 border-2 border-maple/10 border-t-maple rounded-full animate-[spin_1.5s_linear_infinite]" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Trophy className="text-maple animate-bounce" size={32} />
+            </div>
+          </motion.div>
+          
+          <div className="text-center space-y-4">
+            <h2 className="font-display text-4xl md:text-5xl uppercase tracking-widest text-white">
+              UCSF <span className="text-maple">2026</span>
+            </h2>
+            <div className="flex flex-col items-center gap-2">
+              <p className="font-ui text-[10px] font-bold uppercase tracking-[0.6em] text-maple/60">
+                Initializing Arena
+              </p>
+              <div className="w-48 h-1 bg-white/5 rounded-full overflow-hidden">
+                <motion.div 
+                  initial={{ x: '-100%' }}
+                  animate={{ x: '100%' }}
+                  transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+                  className="w-full h-full bg-gradient-to-r from-transparent via-maple to-transparent"
+                />
+              </div>
+            </div>
           </div>
         </div>
-        <p className="font-ui text-xs font-bold uppercase tracking-[0.4em] text-maple animate-pulse">Loading Fest Data…</p>
       </div>
     );
   }
@@ -782,25 +809,6 @@ export default function App() {
           </div>
         );
 
-      case 'admin':
-        return (
-          <div className="max-w-[1600px] mx-auto px-4 py-12">
-            <AdminPanel 
-              matches={matches} 
-              houses={houses} 
-              schedule={schedule}
-              categories={categories}
-              notices={notices}
-              gallery={gallery}
-              culturalResults={culturalResults}
-              stagedChanges={stagedChanges}
-              profile={profile}
-              settings={settings}
-              refresh={refresh} 
-            />
-          </div>
-        );
-
       default:
         return null;
     }
@@ -823,7 +831,7 @@ export default function App() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: 0.2 }}
         >
           {renderContent()}
         </motion.div>

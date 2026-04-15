@@ -28,10 +28,6 @@ export default function Layout({ children, activeTab, setActiveTab, title, subti
     { id: 'gallery', label: 'Gallery', href: '#gallery' },
   ];
 
-  if (profile?.is_super_admin) {
-    navItems.push({ id: 'admin', label: 'Admin', href: '#admin' });
-  }
-
   return (
     <div className="min-h-screen flex flex-col bg-bg text-text selection:bg-maple selection:text-bg">
       <header className="fixed top-0 left-0 right-0 z-[110]">

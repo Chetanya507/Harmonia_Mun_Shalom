@@ -17,9 +17,6 @@ const MatchCard = React.memo(({ match, compact, onClick }: MatchCardProps) => {
   if (compact) {
     return (
       <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
         onClick={onClick}
         className={cn(
           "bg-white/5 border border-border p-4 rounded-2xl flex items-center justify-between gap-4 group cursor-pointer hover:border-maple/30 transition-all",
@@ -57,9 +54,6 @@ const MatchCard = React.memo(({ match, compact, onClick }: MatchCardProps) => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
       onClick={onClick}
       className={cn(
         "card-glass rounded-none border-border overflow-hidden group relative",

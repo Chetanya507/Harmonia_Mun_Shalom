@@ -18,7 +18,7 @@ const globalCache: Record<string, any> = {
   lastFetched: 0
 };
 
-const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
+const CACHE_EXPIRY = 10 * 60 * 1000; // 10 minutes
 
 async function withRetry<T>(fn: () => Promise<T>, retries = 3, delay = 1000): Promise<T> {
   try {
@@ -131,16 +131,7 @@ export function useUCSFData() {
     }
   };
 
-  const fetchStagedChanges = async () => {
-    const { data } = await supabase!.from('staged_changes').select('*').order('created_at', { ascending: false });
-    if (data) {
-      setStagedChanges(data);
-      globalCache.stagedChanges = data;
-    }
-  };
-
   const fetchProfile = async () => {
-    // Use getSession first as it's faster and less likely to cause lock issues
     const { data: { session } } = await supabase!.auth.getSession();
     const user = session?.user;
     
@@ -155,19 +146,6 @@ export function useUCSFData() {
       if (data) {
         setProfile(data);
         globalCache.profile = data;
-      } else if (error && error.code === 'PGRST116') { // Not found
-        // Create profile if it doesn't exist
-        const isSuperAdmin = user.email === 'kotadia.ean@gmail.com';
-        const { data: newProfile } = await supabase!.from('profiles').insert([{
-          id: user.id,
-          email: user.email,
-          is_super_admin: isSuperAdmin
-        }]).select().single();
-        
-        if (newProfile) {
-          setProfile(newProfile);
-          globalCache.profile = newProfile;
-        }
       }
     } catch (err) {
       console.warn('Profile fetch error:', err);
@@ -181,7 +159,6 @@ export function useUCSFData() {
       return;
     }
 
-    // Skip fetch if cache is fresh
     if (isInitial && globalCache.lastFetched && (Date.now() - globalCache.lastFetched < CACHE_EXPIRY)) {
       setLoading(false);
       return;
@@ -191,10 +168,8 @@ export function useUCSFData() {
       if (isInitial && !globalCache.lastFetched) setLoading(true);
       else setIsRefreshing(true);
 
-      // Fetch profile first and separately to avoid auth lock contention
       await withRetry(fetchProfile);
 
-      // Fetch other data in parallel
       await Promise.all([
         withRetry(fetchHouses),
         withRetry(fetchMatches),
@@ -203,15 +178,13 @@ export function useUCSFData() {
         withRetry(fetchCategories),
         withRetry(fetchGallery),
         withRetry(fetchNotices),
-        withRetry(fetchCulturalResults),
-        withRetry(fetchStagedChanges)
+        withRetry(fetchCulturalResults)
       ]);
       
       globalCache.lastFetched = Date.now();
       setError(null);
     } catch (err: any) {
       console.error('Error fetching UCSF data:', err);
-      // Don't show lock errors to user, they are usually transient
       if (!err.message?.includes('lock')) {
         setError(err.message || 'An error occurred while fetching data.');
       }
@@ -226,59 +199,30 @@ export function useUCSFData() {
     
     fetchData(true);
 
-    // Real-time subscriptions - more targeted
-    const housesSub = supabase.channel('houses-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'houses' }, fetchHouses)
-      .subscribe();
-
+    // Only subscribe to highly dynamic tables to reduce load
     const matchesSub = supabase.channel('matches-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, fetchMatches)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, () => {
+        fetchMatches();
+        fetchHouses(); // Refresh houses for points
+      })
       .subscribe();
 
-    const scheduleSub = supabase.channel('schedule-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'schedule' }, fetchSchedule)
-      .subscribe();
-
-    const settingsSub = supabase.channel('settings-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, fetchSettings)
-      .subscribe();
-
-    const categoriesSub = supabase.channel('categories-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, fetchCategories)
-      .subscribe();
-
-    const gallerySub = supabase.channel('gallery-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'gallery' }, fetchGallery)
+    const culturalSub = supabase.channel('cultural-results-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'cultural_results' }, () => {
+        fetchCulturalResults();
+        fetchHouses(); // Refresh houses for points
+      })
       .subscribe();
 
     const noticesSub = supabase.channel('notices-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'notices' }, fetchNotices)
       .subscribe();
 
-    const culturalSub = supabase.channel('cultural-results-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'cultural_results' }, fetchCulturalResults)
-      .subscribe();
-
-    const stagedSub = supabase.channel('staged-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'staged_changes' }, fetchStagedChanges)
-      .subscribe();
-
-    const profileSub = supabase.channel('profile-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, fetchProfile)
-      .subscribe();
-
     return () => {
       if (supabase) {
-        supabase.removeChannel(housesSub);
         supabase.removeChannel(matchesSub);
-        supabase.removeChannel(scheduleSub);
-        supabase.removeChannel(settingsSub);
-        supabase.removeChannel(categoriesSub);
-        supabase.removeChannel(gallerySub);
-        supabase.removeChannel(noticesSub);
         supabase.removeChannel(culturalSub);
-        supabase.removeChannel(stagedSub);
-        supabase.removeChannel(profileSub);
+        supabase.removeChannel(noticesSub);
       }
     };
   }, []);

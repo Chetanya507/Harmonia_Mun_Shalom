@@ -17,10 +17,6 @@ const ScheduleCard = React.memo(({ item, category, index = 0, onCategoryClick }:
 
   return (
     <motion.div 
-      initial={{ opacity: 0, x: -20 }}
-      whileInView={{ opacity: 1, x: 0 }}
-      viewport={{ once: true }}
-      transition={{ delay: index * 0.05 }}
       onClick={onCategoryClick}
       className={cn(
         "grid grid-cols-[80px_1fr] md:grid-cols-[120px_1fr] gap-0 items-start relative group cursor-pointer",

@@ -50,9 +50,6 @@ export default function EventsSection({ categories, matches, setActiveTab }: Eve
         key={groupName}
         layoutId={`card-${groupName}`}
         onClick={() => setExpandedGroupId(groupName)}
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
         className="bg-white/5 border border-border rounded-[32px] p-8 flex flex-col h-full hover:border-maple/30 transition-all group cursor-pointer"
       >
         <div className="flex items-start justify-between mb-6">
