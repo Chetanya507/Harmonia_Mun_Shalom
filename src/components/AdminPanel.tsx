@@ -37,7 +37,226 @@ import { Match, House, ScheduleItem, Category, Notice, StagedChange, Profile } f
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 
-type AdminTab = 'results' | 'matches' | 'schedule' | 'categories' | 'notices' | 'gallery' | 'leaderboards' | 'spreadsheet' | 'settings' | 'changes';
+const CategoryCard = ({ 
+  cat, 
+  deleteCategory, 
+  updateCategory,
+  handleSupabaseError
+}: { 
+  cat: Category, 
+  deleteCategory: (id: string) => void, 
+  updateCategory: (id: string, updates: Partial<Category>) => void,
+  handleSupabaseError: (err: any, context: string) => void
+}) => {
+  const [loading, setLoading] = useState(false);
+  return (
+    <motion.div 
+      layout
+      className="bg-bg2 border border-white/5 rounded-[1.5rem] sm:rounded-[3rem] p-5 sm:p-10 group hover:border-maple/30 transition-all shadow-2xl space-y-6 sm:space-y-8 relative flex flex-col h-full"
+    >
+      <button 
+        onClick={() => deleteCategory(cat.id)}
+        className="absolute top-6 right-6 w-10 h-10 bg-danger/10 hover:bg-danger text-danger hover:text-white rounded-xl transition-all border border-danger/20 flex items-center justify-center active:scale-90 z-30"
+        title="Delete Category"
+      >
+        <Trash2 size={18} />
+      </button>
+
+    <div className="flex flex-col sm:flex-row items-start justify-between gap-6 sm:gap-8 pr-12">
+      <div className="relative group/icon w-16 h-16 sm:w-24 sm:h-24 bg-white/5 rounded-[1.2rem] sm:rounded-[2rem] flex items-center justify-center text-3xl sm:text-5xl border border-white/5 group-hover:border-maple/50 transition-all overflow-hidden shadow-inner shrink-0">
+        {cat.image_url ? (
+          <img 
+            src={cat.image_url} 
+            alt={cat.name} 
+            className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity"
+            referrerPolicy="no-referrer"
+          />
+        ) : (
+          <span className="relative z-10">{cat.icon || <Layers size={24} className="text-muted/30" />}</span>
+        )}
+        <input
+          type="text"
+          value={cat.icon || ''}
+          placeholder="Emoji"
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+          onChange={(e) => updateCategory(cat.id, { icon: e.target.value })}
+        />
+        <div className="absolute inset-0 bg-maple/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+          <span className="text-[7px] font-bold uppercase tracking-widest text-maple mt-10 sm:mt-14">Edit Icon</span>
+        </div>
+      </div>
+      <div className="flex-1 space-y-4 sm:space-y-5 w-full">
+        <div className="flex items-center justify-between gap-4">
+          <input
+            type="text"
+            value={cat.name}
+            className="flex-1 bg-transparent border-none text-xl sm:text-3xl font-display uppercase tracking-tighter text-white outline-none focus:text-maple transition-colors min-w-0"
+            onChange={(e) => updateCategory(cat.id, { name: e.target.value })}
+          />
+        </div>
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-3 bg-white/5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-white/5 shadow-inner">
+            <span className="font-ui text-[8px] sm:text-[9px] font-bold text-muted uppercase tracking-[0.2em]">Order</span>
+            <input
+              type="number"
+              value={cat.sort_order}
+              className="w-8 sm:w-10 bg-transparent border-none text-white text-[10px] sm:text-[11px] font-bold text-center outline-none focus:text-maple"
+              onChange={(e) => updateCategory(cat.id, { sort_order: parseInt(e.target.value) || 0 })}
+            />
+          </div>
+          <div className="flex items-center gap-1.5 sm:gap-2 bg-white/5 p-1 border border-white/5 rounded-lg sm:rounded-xl">
+            {['sport', 'cultural'].map((type) => (
+              <button
+                key={type}
+                onClick={() => updateCategory(cat.id, { category_type: type as any })}
+                className={cn(
+                  "px-3 sm:px-4 py-1.5 sm:py-2 font-ui text-[8px] sm:text-[9px] font-bold uppercase tracking-[0.2em] transition-all rounded-md sm:rounded-lg whitespace-nowrap",
+                  (cat.category_type || 'sport') === type ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
+                )}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div className="space-y-3 sm:space-y-4 pt-4 border-t border-white/5">
+      <div className="space-y-2">
+        <label className="font-ui text-[8px] sm:text-[9px] font-bold text-muted uppercase tracking-[0.3em] ml-1">Image URL</label>
+        <div className="relative group/img flex gap-3">
+          <input
+            type="text"
+            value={cat.image_url || ''}
+            placeholder="https://images.unsplash.com/..."
+            className="flex-1 bg-white/5 border border-white/5 rounded-xl sm:rounded-2xl px-4 sm:px-5 py-3 sm:py-4 text-[9px] sm:text-[10px] font-bold tracking-widest text-muted outline-none focus:border-maple/50 focus:text-text transition-all shadow-inner pr-10 sm:pr-12"
+            onChange={(e) => updateCategory(cat.id, { image_url: e.target.value })}
+            id={`cat-img-${cat.id}`}
+          />
+          <button 
+            onClick={() => document.getElementById(`cat-upload-${cat.id}`)?.click()}
+            className="bg-white/5 hover:bg-white/10 text-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-white/5 transition-all active:scale-90 shadow-lg"
+            title="Upload Image"
+          >
+            <Upload size={16} />
+          </button>
+          <input 
+            type="file"
+            id={`cat-upload-${cat.id}`}
+            className="hidden"
+            accept="image/*"
+            onChange={async (e) => {
+              const file = e.target.files?.[0];
+              if (!file || !supabase) return;
+              setLoading(true);
+              try {
+                const fileName = `cat_${cat.id}_${Date.now()}`;
+                const { error: uploadError } = await supabase.storage.from('ucsf-media').upload(fileName, file);
+                if (uploadError) throw uploadError;
+                const { data: { publicUrl } } = supabase.storage.from('ucsf-media').getPublicUrl(fileName);
+                updateCategory(cat.id, { image_url: publicUrl });
+                const input = document.getElementById(`cat-img-${cat.id}`) as HTMLInputElement;
+                if (input) input.value = publicUrl;
+              } catch (err: any) {
+                handleSupabaseError(err, 'Category image upload failed');
+              } finally {
+                setLoading(false);
+              }
+            }}
+          />
+          <div className="absolute right-16 top-1/2 -translate-y-1/2 text-muted/30 group-focus-within/img:text-maple transition-colors pointer-events-none">
+            <ImageIcon size={16} />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div className="grid grid-cols-2 gap-6 pt-8 border-t border-white/5">
+      {[
+        { label: 'Gender', key: 'gender', placeholder: 'Boys/Girls' },
+        { label: 'Team Size', key: 'team_size', placeholder: '11 Players' },
+        { label: 'Duration', key: 'duration', placeholder: '20 mins' }
+      ].map((field) => (
+        <div key={field.key} className="space-y-2">
+          <label className="font-ui text-[9px] font-bold text-muted uppercase tracking-[0.3em] ml-1">{field.label}</label>
+          <input
+            type="text"
+            value={(cat[field.key as keyof typeof cat] as any) || ''}
+            placeholder={field.placeholder}
+            className="w-full bg-white/5 border border-white/5 rounded-2xl px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-muted outline-none focus:border-maple/50 focus:text-text transition-all shadow-inner"
+            onChange={(e) => updateCategory(cat.id, { [field.key]: e.target.value })}
+          />
+        </div>
+      ))}
+
+      <div className="col-span-2 space-y-2">
+        <label className="font-ui text-[9px] font-bold text-muted uppercase tracking-[0.3em] ml-1">Special Rules & Regulations</label>
+        <textarea
+          value={cat.special_rules || ''}
+          placeholder="Enter rules and regulations..."
+          className="w-full bg-white/5 border border-white/5 rounded-2xl px-5 py-4 text-[10px] font-bold tracking-widest text-muted outline-none focus:border-maple/50 focus:text-text transition-all shadow-inner min-h-[120px]"
+          onChange={(e) => updateCategory(cat.id, { special_rules: e.target.value })}
+        />
+      </div>
+
+      <div className="col-span-2 space-y-4">
+        <div className="flex items-center justify-between">
+          <label className="font-ui text-[9px] font-bold text-muted uppercase tracking-[0.3em] ml-1">Judging Criteria</label>
+          <button 
+            onClick={() => {
+              const current = cat.judging_criteria || [];
+              updateCategory(cat.id, { judging_criteria: [...current, { criterion: 'New Criterion', weight: '10 pts' }] });
+            }}
+            className="text-maple hover:text-white transition-colors flex items-center gap-2 font-ui text-[8px] font-bold uppercase tracking-widest"
+          >
+            <Plus size={12} /> Add Criterion
+          </button>
+        </div>
+        <div className="space-y-3">
+          {(cat.judging_criteria || []).map((item, idx) => (
+            <div key={idx} className="flex gap-3 items-center">
+              <input
+                type="text"
+                value={item.criterion}
+                placeholder="Criterion"
+                className="flex-1 bg-white/5 border border-white/5 rounded-xl px-4 py-2 text-[10px] font-bold text-muted outline-none focus:border-maple/50 focus:text-text min-w-0"
+                onChange={(e) => {
+                  const newCriteria = [...(cat.judging_criteria || [])];
+                  newCriteria[idx] = { ...newCriteria[idx], criterion: e.target.value };
+                  updateCategory(cat.id, { judging_criteria: newCriteria });
+                }}
+              />
+              <input
+                type="text"
+                value={item.weight}
+                placeholder="Weight"
+                className="w-24 bg-white/5 border border-white/5 rounded-xl px-4 py-2 text-[10px] font-bold text-maple text-center outline-none focus:border-maple/50"
+                onChange={(e) => {
+                  const newCriteria = [...(cat.judging_criteria || [])];
+                  newCriteria[idx] = { ...newCriteria[idx], weight: e.target.value };
+                  updateCategory(cat.id, { judging_criteria: newCriteria });
+                }}
+              />
+              <button 
+                onClick={() => {
+                  const newCriteria = (cat.judging_criteria || []).filter((_, i) => i !== idx);
+                  updateCategory(cat.id, { judging_criteria: newCriteria });
+                }}
+                className="p-2 text-danger/50 hover:text-danger hover:bg-danger/10 rounded-lg transition-all"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </motion.div>
+  );
+};
+
+type AdminTab = 'results' | 'matches' | 'schedule' | 'categories' | 'notices' | 'gallery' | 'leaderboards' | 'settings' | 'changes';
 
 interface AdminPanelProps {
   matches: Match[];
@@ -60,217 +279,67 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const CategoryCard = ({ cat }: { cat: Category }) => {
-    return (
-      <motion.div 
-        layout
-        className="bg-bg2 border border-white/5 rounded-[1.5rem] sm:rounded-[3rem] p-5 sm:p-10 group hover:border-maple/30 transition-all shadow-2xl space-y-6 sm:space-y-8 relative overflow-hidden"
-      >
-      <div className="flex flex-col sm:flex-row items-start justify-between gap-6 sm:gap-8">
-        <div className="relative group/icon w-16 h-16 sm:w-24 sm:h-24 bg-white/5 rounded-[1.2rem] sm:rounded-[2rem] flex items-center justify-center text-3xl sm:text-5xl border border-white/5 group-hover:border-maple/50 transition-all overflow-hidden shadow-inner shrink-0">
-          {cat.image_url ? (
-            <img 
-              src={cat.image_url} 
-              alt={cat.name} 
-              className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-100 transition-opacity"
-              referrerPolicy="no-referrer"
-            />
-          ) : (
-            <span className="relative z-10">{cat.icon || <Layers size={24} className="text-muted/30" />}</span>
-          )}
-          <input
-            type="text"
-            defaultValue={cat.icon || ''}
-            placeholder="Emoji"
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
-            onBlur={(e) => updateCategory(cat.id, { icon: e.target.value })}
-          />
-          <div className="absolute inset-0 bg-maple/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-            <span className="text-[7px] font-bold uppercase tracking-widest text-maple mt-10 sm:mt-14">Edit Icon</span>
-          </div>
-        </div>
-        <div className="flex-1 space-y-4 sm:space-y-5 w-full">
-          <div className="flex items-center justify-between gap-4">
-            <input
-              type="text"
-              defaultValue={cat.name}
-              className="flex-1 bg-transparent border-none text-xl sm:text-3xl font-display uppercase tracking-tighter text-white outline-none focus:text-maple transition-colors min-w-0"
-              onBlur={(e) => updateCategory(cat.id, { name: e.target.value })}
-            />
-            <button 
-              onClick={() => deleteCategory(cat.id)}
-              className="w-8 h-8 sm:w-10 sm:h-10 bg-danger/5 hover:bg-danger text-danger hover:text-white rounded-lg sm:rounded-xl transition-all border border-danger/10 flex items-center justify-center active:scale-90 opacity-100 sm:opacity-0 group-hover:opacity-100 shrink-0"
-            >
-              <Trash2 size={16} />
-            </button>
-          </div>
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-            <div className="flex items-center gap-3 bg-white/5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-white/5 shadow-inner">
-              <span className="font-ui text-[8px] sm:text-[9px] font-bold text-muted uppercase tracking-[0.2em]">Order</span>
-              <input
-                type="number"
-                defaultValue={cat.sort_order}
-                className="w-8 sm:w-10 bg-transparent border-none text-white text-[10px] sm:text-[11px] font-bold text-center outline-none focus:text-maple"
-                onBlur={(e) => updateCategory(cat.id, { sort_order: parseInt(e.target.value) })}
-              />
-            </div>
-            <div className="flex items-center gap-1.5 sm:gap-2 bg-white/5 p-1 border border-white/5 rounded-lg sm:rounded-xl">
-              {['sport', 'cultural'].map((type) => (
-                <button
-                  key={type}
-                  onClick={() => updateCategory(cat.id, { category_type: type as any })}
-                  className={cn(
-                    "px-3 sm:px-4 py-1.5 sm:py-2 font-ui text-[8px] sm:text-[9px] font-bold uppercase tracking-[0.2em] transition-all rounded-md sm:rounded-lg whitespace-nowrap",
-                    (cat.category_type || 'sport') === type ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
-                  )}
-                >
-                  {type}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
+  const [discardKey, setDiscardKey] = useState(0);
+  const [pendingChanges, setPendingChanges] = useState<Record<string, Record<string, any>>>({
+    categories: {},
+    matches: {},
+    schedule: {},
+    notices: {},
+    gallery: {},
+    cultural_results: {},
+    houses: {},
+    settings: {}
+  });
 
-      <div className="space-y-3 sm:space-y-4 pt-4 border-t border-white/5">
-        <div className="space-y-2">
-          <label className="font-ui text-[8px] sm:text-[9px] font-bold text-muted uppercase tracking-[0.3em] ml-1">Image URL</label>
-          <div className="relative group/img flex gap-3">
-            <input
-              type="text"
-              defaultValue={cat.image_url || ''}
-              placeholder="https://images.unsplash.com/..."
-              className="flex-1 bg-white/5 border border-white/5 rounded-xl sm:rounded-2xl px-4 sm:px-5 py-3 sm:py-4 text-[9px] sm:text-[10px] font-bold tracking-widest text-muted outline-none focus:border-maple/50 focus:text-text transition-all shadow-inner pr-10 sm:pr-12"
-              onBlur={(e) => updateCategory(cat.id, { image_url: e.target.value })}
-              id={`cat-img-${cat.id}`}
-            />
-            <button 
-              onClick={() => document.getElementById(`cat-upload-${cat.id}`)?.click()}
-              className="bg-white/5 hover:bg-white/10 text-white p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-white/5 transition-all active:scale-90 shadow-lg"
-              title="Upload Image"
-            >
-              <Upload size={16} />
-            </button>
-            <input 
-              type="file"
-              id={`cat-upload-${cat.id}`}
-              className="hidden"
-              accept="image/*"
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file || !supabase) return;
-                setLoading(true);
-                try {
-                  const fileName = `cat_${cat.id}_${Date.now()}`;
-                  const { error: uploadError } = await supabase.storage.from('ucsf-media').upload(fileName, file);
-                  if (uploadError) throw uploadError;
-                  const { data: { publicUrl } } = supabase.storage.from('ucsf-media').getPublicUrl(fileName);
-                  updateCategory(cat.id, { image_url: publicUrl });
-                  const input = document.getElementById(`cat-img-${cat.id}`) as HTMLInputElement;
-                  if (input) input.value = publicUrl;
-                } catch (err: any) {
-                  handleSupabaseError(err, 'Category image upload failed');
-                } finally {
-                  setLoading(false);
-                }
-              }}
-            />
-            <div className="absolute right-16 top-1/2 -translate-y-1/2 text-muted/30 group-focus-within/img:text-maple transition-colors pointer-events-none">
-              <ImageIcon size={16} />
-            </div>
-          </div>
-        </div>
-      </div>
+  // Merged data for live preview
+  const displayCategories = useMemo(() => {
+    return categories.map(cat => ({
+      ...cat,
+      ...(pendingChanges.categories?.[cat.id] || {})
+    }));
+  }, [categories, pendingChanges.categories]);
 
-      <div className="grid grid-cols-2 gap-6 pt-8 border-t border-white/5">
-        {[
-          { label: 'Gender', key: 'gender', placeholder: 'Boys/Girls' },
-          { label: 'Team Size', key: 'team_size', placeholder: '11 Players' },
-          { label: 'Duration', key: 'duration', placeholder: '20 mins' }
-        ].map((field) => (
-          <div key={field.key} className="space-y-2">
-            <label className="font-ui text-[9px] font-bold text-muted uppercase tracking-[0.3em] ml-1">{field.label}</label>
-            <input
-              type="text"
-              defaultValue={(cat[field.key as keyof typeof cat] as any) || ''}
-              placeholder={field.placeholder}
-              className="w-full bg-white/5 border border-white/5 rounded-2xl px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-muted outline-none focus:border-maple/50 focus:text-text transition-all shadow-inner"
-              onBlur={(e) => updateCategory(cat.id, { [field.key]: e.target.value })}
-            />
-          </div>
-        ))}
-        
-        {/* Cultural Results Section */}
-        {cat.category_type === 'cultural' && (
-          <div className="col-span-2 pt-8 border-t border-white/5 space-y-6">
-            <div className="flex items-center justify-between">
-              <label className="font-ui text-[10px] font-bold text-maple uppercase tracking-[0.3em]">Dynasty Rankings</label>
-              <button 
-                onClick={() => addCulturalResult(cat.id)}
-                className="text-maple hover:text-white transition-colors flex items-center gap-2 font-ui text-[9px] font-bold uppercase tracking-widest"
-              >
-                <Plus size={14} /> Add Rank
-              </button>
-            </div>
-            <div className="space-y-4">
-              {culturalResults.filter(r => r.category_id === cat.id).sort((a, b) => a.rank - b.rank).map((result) => (
-                <div key={result.id} className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5 group/res">
-                  <div className="w-10 h-10 bg-white/5 rounded-lg flex items-center justify-center font-display text-maple">
-                    <input
-                      type="number"
-                      defaultValue={result.rank}
-                      className="w-full bg-transparent border-none text-center outline-none"
-                      onBlur={(e) => updateCulturalResult(result.id, { rank: parseInt(e.target.value) })}
-                    />
-                  </div>
-                  <select
-                    value={result.house_id}
-                    onChange={(e) => updateCulturalResult(result.id, { house_id: e.target.value })}
-                    className="flex-1 bg-transparent border-none text-[10px] font-bold uppercase tracking-widest text-white outline-none"
-                  >
-                    {houses.map(h => <option key={h.id} value={h.id} className="bg-[#0d1b33]">{h.name}</option>)}
-                  </select>
-                  <div className="flex items-center gap-2 bg-white/5 px-3 py-1 rounded-lg">
-                    <span className="text-[8px] font-bold text-muted uppercase">Pts</span>
-                    <input
-                      type="number"
-                      defaultValue={result.points}
-                      className="w-12 bg-transparent border-none text-[10px] font-bold text-maple text-center outline-none"
-                      onBlur={(e) => updateCulturalResult(result.id, { points: parseInt(e.target.value) })}
-                    />
-                  </div>
-                  <button 
-                    onClick={() => deleteCulturalResult(result.id)}
-                    className="opacity-0 group-hover/res:opacity-100 text-danger/50 hover:text-danger transition-all"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    </motion.div>
-    );
-  };
+  const displayMatches = useMemo(() => {
+    return matches.map(m => ({
+      ...m,
+      ...(pendingChanges.matches?.[m.id] || {})
+    }));
+  }, [matches, pendingChanges.matches]);
+
+  const displaySchedule = useMemo(() => {
+    return schedule.map(s => ({
+      ...s,
+      ...(pendingChanges.schedule?.[s.id] || {})
+    }));
+  }, [schedule, pendingChanges.schedule]);
+
+  const displayNotices = useMemo(() => {
+    return notices.map(n => ({
+      ...n,
+      ...(pendingChanges.notices?.[n.id] || {})
+    }));
+  }, [notices, pendingChanges.notices]);
+
+  const displayGallery = useMemo(() => {
+    return gallery.map(item => ({
+      ...item,
+      ...(pendingChanges.gallery?.[item.id] || {})
+    }));
+  }, [gallery, pendingChanges.gallery]);
+
+  const displayCulturalResults = useMemo(() => {
+    return culturalResults.map(r => ({
+      ...r,
+      ...(pendingChanges.cultural_results?.[r.id] || {})
+    }));
+  }, [culturalResults, pendingChanges.cultural_results]);
+  // Nested CategoryCard removed
 
   const [activeTab, setActiveTab] = useState<AdminTab>('results');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [localSettings, setLocalSettings] = useState<Record<string, string>>({});
   const [hasChanges, setHasChanges] = useState(false);
   const [selectedResultCategory, setSelectedResultCategory] = useState<string | null>(null);
-
-  // Staging area for all data changes
-  const [pendingChanges, setPendingChanges] = useState<Record<string, Record<string, any>>>({
-    categories: {},
-    matches: {},
-    schedule: {},
-    notices: {},
-    cultural_results: {},
-    houses: {},
-    settings: {}
-  });
 
   // Load pending changes from localStorage on mount
   React.useEffect(() => {
@@ -460,6 +529,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
           matches: {},
           schedule: {},
           notices: {},
+          gallery: {},
           cultural_results: {},
           houses: {},
           settings: {}
@@ -467,6 +537,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
         localStorage.removeItem('ucsf_pending_changes');
         setLocalSettings(settings);
         setHasChanges(false);
+        setDiscardKey(prev => prev + 1);
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
       }
     });
@@ -749,6 +820,10 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
       }
     }
     return url;
+  };
+
+  const updateGalleryItem = (id: number, updates: any) => {
+    stageChange('gallery', id, updates);
   };
 
   const addGalleryItems = async (files: FileList) => {
@@ -1068,7 +1143,6 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
               { id: 'notices', label: 'Notices', icon: Bell },
               { id: 'gallery', label: 'Gallery', icon: ImageIcon },
               { id: 'leaderboards', label: 'Leaderboards', icon: Trophy },
-              { id: 'spreadsheet', label: 'Spreadsheet', icon: FileText },
               { id: 'settings', label: 'Settings', icon: SettingsIcon },
               ...(profile?.is_super_admin ? [{ id: 'changes', label: 'Approvals', icon: CheckCircle }] : []),
             ].map((item) => (
@@ -1183,7 +1257,6 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
               {activeTab === 'settings' && <SettingsIcon size={20} />}
               {activeTab === 'gallery' && <ImageIcon size={20} />}
               {activeTab === 'leaderboards' && <Trophy size={20} />}
-              {activeTab === 'spreadsheet' && <FileText size={20} />}
               {activeTab === 'changes' && <CheckCircle size={20} />}
             </div>
             <div>
@@ -1214,7 +1287,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
         </header>
 
         {/* Content Scroll Area */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10 custom-scrollbar">
+        <main key={discardKey} className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10 custom-scrollbar">
           <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
             {error && (
               <motion.div 
@@ -1263,131 +1336,225 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                   exit={{ opacity: 0, x: -20 }}
                   className="space-y-12"
                 >
-                  <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 sm:gap-8">
+                  <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 sm:gap-8 max-w-full overflow-hidden">
                     <div className="w-full lg:w-auto text-center lg:text-left">
                       <h2 className="text-2xl sm:text-5xl font-display uppercase tracking-tighter text-white">Event Results</h2>
                       <p className="text-muted mt-2 font-sans text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.3em]">Enter scores and rankings for real-time feedback</p>
                     </div>
                     
-                    <div className="flex items-center gap-2 bg-white/5 p-1 border border-white/5 rounded-xl sm:rounded-2xl overflow-x-auto no-scrollbar max-w-full w-full lg:w-auto">
-                      {categories.map(cat => (
-                        <button
-                          key={cat.id}
-                          onClick={() => setSelectedResultCategory(cat.id)}
-                          className={cn(
-                            "px-4 sm:px-6 py-2 sm:py-3 font-ui text-[8px] sm:text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg sm:rounded-xl whitespace-nowrap",
-                            selectedResultCategory === cat.id ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
-                          )}
-                        >
-                          {cat.name}
-                        </button>
-                      ))}
+                    <div className="flex flex-col gap-6 bg-white/5 p-6 sm:p-8 border border-white/5 rounded-[2rem]">
+                      <div className="flex items-center gap-4 px-2">
+                        <Layers size={20} className="text-maple" />
+                        <h3 className="text-xl font-display uppercase tracking-widest text-white">Select Event</h3>
+                      </div>
+                      
+                      <div className="space-y-6">
+                        {/* Sports Group */}
+                        <div className="space-y-3">
+                          <p className="font-ui text-[9px] font-bold text-muted uppercase tracking-[0.3em] ml-2">Sports Events</p>
+                          <div className="flex items-center flex-nowrap gap-2 overflow-x-auto no-scrollbar pb-2">
+                            {displayCategories.filter(c => c.category_type === 'sport' || !c.category_type).map(cat => (
+                              <button
+                                key={cat.id}
+                                onClick={() => setSelectedResultCategory(cat.id)}
+                                className={cn(
+                                  "px-4 sm:px-6 py-2 sm:py-3 font-ui text-[8px] sm:text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg sm:rounded-xl whitespace-nowrap shrink-0",
+                                  selectedResultCategory === cat.id ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text bg-white/5"
+                                )}
+                              >
+                                {cat.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Cultural Group */}
+                        <div className="space-y-3">
+                          <p className="font-ui text-[9px] font-bold text-muted uppercase tracking-[0.3em] ml-2">Cultural Events</p>
+                          <div className="flex items-center flex-nowrap gap-2 overflow-x-auto no-scrollbar pb-2">
+                            {displayCategories.filter(c => c.category_type === 'cultural').map(cat => (
+                              <button
+                                key={cat.id}
+                                onClick={() => setSelectedResultCategory(cat.id)}
+                                className={cn(
+                                  "px-4 sm:px-6 py-2 sm:py-3 font-ui text-[8px] sm:text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg sm:rounded-xl whitespace-nowrap shrink-0",
+                                  selectedResultCategory === cat.id ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text bg-white/5"
+                                )}
+                              >
+                                {cat.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
                   {selectedResultCategory ? (
-                    <div className="space-y-8">
-                      {categories.find(c => c.id === selectedResultCategory)?.category_type === 'sport' ? (
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                          {matches.filter(m => m.category_id === selectedResultCategory).map(match => (
-                            <div key={match.id} className="bg-bg2 border border-white/5 rounded-[1.5rem] sm:rounded-[2rem] p-6 sm:p-8 space-y-6">
-                              <div className="flex justify-between items-center border-b border-white/5 pb-4">
-                                <span className="font-ui text-[9px] font-bold text-muted uppercase tracking-widest">Match #{match.match_no}</span>
-                                <span className="font-ui text-[9px] font-bold text-maple uppercase tracking-widest">{match.eligible_years}</span>
-                              </div>
-                              
-                              <div className="grid grid-cols-1 sm:grid-cols-3 items-center gap-4">
-                                <div className="text-center space-y-2">
-                                  <p className="font-display text-base sm:text-lg uppercase truncate">{houses.find(h => h.id === match.team1_id)?.name}</p>
-                                  <input 
-                                    type="number" 
-                                    value={match.score1}
-                                    onChange={(e) => updateMatch(match.id, { score1: parseInt(e.target.value) })}
-                                    className="w-full bg-white/5 border border-white/5 rounded-xl py-3 text-center text-2xl font-display text-white outline-none focus:border-maple/50"
-                                  />
-                                </div>
-                                <div className="text-center text-muted font-display text-xl sm:text-2xl py-2 sm:py-0">VS</div>
-                                <div className="text-center space-y-2">
-                                  <p className="font-display text-base sm:text-lg uppercase truncate">{houses.find(h => h.id === match.team2_id)?.name}</p>
-                                  <input 
-                                    type="number" 
-                                    value={match.score2}
-                                    onChange={(e) => updateMatch(match.id, { score2: parseInt(e.target.value) })}
-                                    className="w-full bg-white/5 border border-white/5 rounded-xl py-3 text-center text-2xl font-display text-white outline-none focus:border-maple/50"
-                                  />
-                                </div>
-                              </div>
-
-                              <div className="pt-4 space-y-4">
-                                <label className="font-ui text-[9px] font-bold text-muted uppercase tracking-widest block">Winner</label>
-                                <select
-                                  value={match.winner_id || ''}
-                                  onChange={(e) => updateMatch(match.id, { winner_id: e.target.value || null, status: 'completed' })}
-                                  className="w-full bg-white/5 border border-white/5 rounded-xl py-3 px-4 text-[10px] font-bold uppercase tracking-widest text-maple outline-none"
-                                >
-                                  <option value="" className="bg-bg-dark">Select Winner</option>
-                                  <option value={match.team1_id} className="bg-bg-dark">{houses.find(h => h.id === match.team1_id)?.name}</option>
-                                  <option value={match.team2_id} className="bg-bg-dark">{houses.find(h => h.id === match.team2_id)?.name}</option>
-                                  <option value="draw" className="bg-bg-dark">Draw</option>
-                                </select>
-                              </div>
+                    <div className="space-y-12">
+                      {/* Sports Matches Section (if applicable) */}
+                      {displayCategories.find(c => c.id === selectedResultCategory)?.category_type === 'sport' && (
+                        <div className="space-y-12">
+                          <div className="flex items-center justify-between px-4">
+                            <div className="flex items-center gap-4">
+                              <Activity size={20} className="text-maple" />
+                              <h3 className="text-xl sm:text-2xl font-display uppercase tracking-tighter text-white">Match Scores</h3>
                             </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="bg-bg2 border border-white/5 rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-10 space-y-8">
-                          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                            <h3 className="text-2xl sm:text-3xl font-display uppercase tracking-tighter text-white">Dynasty Rankings</h3>
                             <button 
-                              onClick={() => addCulturalResult(selectedResultCategory)}
-                              className="w-full sm:w-auto bg-maple hover:bg-maple/90 text-bg py-3 px-6 rounded-xl font-ui text-[9px] font-bold uppercase tracking-[0.2em] transition-all shadow-xl shadow-maple/20 flex items-center justify-center gap-2 active:scale-95"
+                              onClick={() => addMatch(selectedResultCategory)}
+                              className="bg-maple/10 hover:bg-maple/20 text-maple py-2 px-4 rounded-lg font-ui text-[9px] font-bold uppercase tracking-[0.2em] transition-all border border-maple/20 flex items-center gap-2 active:scale-95"
                             >
-                              <Plus size={14} /> Add Rank
+                              <Plus size={14} /> Add Match
                             </button>
                           </div>
                           
-                          <div className="space-y-4">
-                            {culturalResults.filter(r => r.category_id === selectedResultCategory).sort((a, b) => a.rank - b.rank).map((result) => (
-                              <div key={result.id} className="flex flex-col lg:flex-row items-center gap-4 sm:gap-6 bg-white/5 p-4 sm:p-6 rounded-2xl border border-white/5 group/res">
-                                <div className="flex items-center gap-4 w-full lg:w-auto">
-                                  <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/5 rounded-xl flex items-center justify-center font-display text-xl sm:text-2xl text-maple shrink-0">
-                                    <input
-                                      type="number"
-                                      defaultValue={result.rank}
-                                      className="w-full bg-transparent border-none text-center outline-none"
-                                      onBlur={(e) => updateCulturalResult(result.id, { rank: parseInt(e.target.value) })}
-                                    />
+                          <div className="space-y-12">
+                            {(() => {
+                              const catMatches = displayMatches.filter(m => m.category_id === selectedResultCategory);
+                              const matchesByGrade: Record<string, Match[]> = {};
+                              catMatches.forEach(m => {
+                                const grade = m.eligible_years || 'Grade Not Set';
+                                if (!matchesByGrade[grade]) matchesByGrade[grade] = [];
+                                matchesByGrade[grade].push(m);
+                              });
+
+                              if (catMatches.length === 0) {
+                                return (
+                                  <div className="py-12 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
+                                    <p className="text-muted font-ui text-[10px] font-bold uppercase tracking-widest">No matches found for this category</p>
                                   </div>
-                                  <select
-                                    value={result.house_id}
-                                    onChange={(e) => updateCulturalResult(result.id, { house_id: e.target.value })}
-                                    className="flex-1 bg-transparent border-none text-[10px] sm:text-xs font-bold uppercase tracking-widest text-white outline-none truncate"
-                                  >
-                                    {houses.map(h => <option key={h.id} value={h.id} className="bg-bg-dark">{h.name}</option>)}
-                                  </select>
-                                </div>
-                                <div className="flex items-center justify-between w-full lg:w-auto gap-4">
-                                  <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-xl border border-white/5 flex-1 lg:flex-none">
-                                    <span className="text-[9px] sm:text-[10px] font-bold text-muted uppercase">Points</span>
-                                    <input
-                                      type="number"
-                                      defaultValue={result.points}
-                                      className="w-full lg:w-16 bg-transparent border-none text-sm font-bold text-maple text-center outline-none"
-                                      onBlur={(e) => updateCulturalResult(result.id, { points: parseInt(e.target.value) })}
-                                    />
+                                );
+                              }
+
+                              return Object.entries(matchesByGrade).map(([grade, gradeMatches]) => (
+                                <div key={grade} className="space-y-6">
+                                  <div className="flex items-center gap-4 px-4">
+                                    <div className="w-2 h-2 rounded-full bg-maple shadow-[0_0_10px_rgba(188,138,44,0.5)]" />
+                                    <h4 className="text-lg font-display uppercase tracking-widest text-maple/90">{grade}</h4>
+                                    <span className="px-3 py-1 bg-white/5 border border-white/5 rounded-full text-[9px] font-bold text-muted uppercase tracking-widest">{gradeMatches.length} Matches</span>
                                   </div>
-                                  <button 
-                                    onClick={() => deleteCulturalResult(result.id)}
-                                    className="p-3 sm:p-2 text-danger/50 hover:text-danger hover:bg-danger/10 rounded-lg transition-all shrink-0"
-                                  >
-                                    <Trash2 size={18} />
-                                  </button>
+                                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                    {gradeMatches.map(match => (
+                                      <div key={match.id} className="bg-bg2 border border-white/5 rounded-[1.5rem] sm:rounded-[2rem] p-6 sm:p-8 space-y-6 relative group">
+                                        <button 
+                                          onClick={() => deleteMatch(match.id)}
+                                          className="absolute top-4 right-4 w-8 h-8 bg-danger/5 hover:bg-danger text-danger hover:text-white rounded-lg transition-all border border-danger/10 flex items-center justify-center active:scale-90 opacity-0 group-hover:opacity-100 z-10"
+                                          title="Delete Match"
+                                        >
+                                          <Trash2 size={14} />
+                                        </button>
+                                        <div className="flex justify-between items-center border-b border-white/5 pb-4">
+                                          <span className="font-ui text-[9px] font-bold text-muted uppercase tracking-widest">Match #{match.match_no}</span>
+                                          <span className="font-ui text-[9px] font-bold text-maple uppercase tracking-widest">{match.eligible_years}</span>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-1 sm:grid-cols-3 items-center gap-4">
+                                          <div className="text-center space-y-2">
+                                            <p className="font-display text-base sm:text-lg uppercase truncate">{houses.find(h => h.id === match.team1_id)?.name}</p>
+                                            <input 
+                                              type="number" 
+                                              value={match.score1}
+                                              onChange={(e) => updateMatch(match.id, { score1: parseInt(e.target.value) })}
+                                              className="w-full bg-white/5 border border-white/5 rounded-xl py-3 text-center text-2xl font-display text-white outline-none focus:border-maple/50"
+                                            />
+                                          </div>
+                                          <div className="text-center text-muted font-display text-xl sm:text-2xl py-2 sm:py-0">VS</div>
+                                          <div className="text-center space-y-2">
+                                            <p className="font-display text-base sm:text-lg uppercase truncate">{houses.find(h => h.id === match.team2_id)?.name}</p>
+                                            <input 
+                                              type="number" 
+                                              value={match.score2}
+                                              onChange={(e) => updateMatch(match.id, { score2: parseInt(e.target.value) })}
+                                              className="w-full bg-white/5 border border-white/5 rounded-xl py-3 text-center text-2xl font-display text-white outline-none focus:border-maple/50"
+                                            />
+                                          </div>
+                                        </div>
+
+                                        <div className="pt-4 space-y-4">
+                                          <label className="font-ui text-[9px] font-bold text-muted uppercase tracking-widest block">Winner</label>
+                                          <select
+                                            value={match.winner_id || ''}
+                                            onChange={(e) => updateMatch(match.id, { winner_id: e.target.value || null, status: 'completed' })}
+                                            className="w-full bg-white/5 border border-white/5 rounded-xl py-3 px-4 text-[10px] font-bold uppercase tracking-widest text-maple outline-none"
+                                          >
+                                            <option value="" className="bg-bg-dark">Select Winner</option>
+                                            <option value={match.team1_id} className="bg-bg-dark">{houses.find(h => h.id === match.team1_id)?.name}</option>
+                                            <option value={match.team2_id} className="bg-bg-dark">{houses.find(h => h.id === match.team2_id)?.name}</option>
+                                            <option value="draw" className="bg-bg-dark">Draw</option>
+                                          </select>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
+                              ));
+                            })()}
                           </div>
                         </div>
                       )}
+
+                      {/* Manual Point Entry Section (Dynasty Rankings) */}
+                      <div className="bg-bg2 border border-white/5 rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-10 space-y-8">
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                          <div className="flex items-center gap-4">
+                            <Trophy size={24} className="text-maple" />
+                            <h3 className="text-2xl sm:text-3xl font-display uppercase tracking-tighter text-white">Final Dynasty Points</h3>
+                          </div>
+                          <button 
+                            onClick={() => addCulturalResult(selectedResultCategory)}
+                            className="w-full sm:w-auto bg-maple hover:bg-maple/90 text-bg py-3 px-6 rounded-xl font-ui text-[9px] font-bold uppercase tracking-[0.2em] transition-all shadow-xl shadow-maple/20 flex items-center justify-center gap-2 active:scale-95"
+                          >
+                            <Plus size={14} /> Add Dynasty Entry
+                          </button>
+                        </div>
+                        
+                        <div className="space-y-4">
+                          {displayCulturalResults.filter(r => r.category_id === selectedResultCategory).sort((a, b) => a.rank - b.rank).map((result) => (
+                            <div key={result.id} className="flex flex-col lg:flex-row items-center gap-4 sm:gap-6 bg-white/5 p-4 sm:p-6 rounded-2xl border border-white/5 group/res">
+                              <div className="flex items-center gap-4 w-full lg:w-auto">
+                                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/5 rounded-xl flex items-center justify-center font-display text-xl sm:text-2xl text-maple shrink-0">
+                                  <input
+                                    type="number"
+                                    value={result.rank || ''}
+                                    placeholder="Rank"
+                                    className="w-full bg-transparent border-none text-center outline-none"
+                                    onChange={(e) => updateCulturalResult(result.id, { rank: parseInt(e.target.value) || 0 })}
+                                  />
+                                </div>
+                                <select
+                                  value={result.house_id}
+                                  onChange={(e) => updateCulturalResult(result.id, { house_id: e.target.value })}
+                                  className="flex-1 bg-transparent border-none text-[10px] sm:text-xs font-bold uppercase tracking-widest text-white outline-none truncate"
+                                >
+                                  {houses.map(h => <option key={h.id} value={h.id} className="bg-bg-dark">{h.name}</option>)}
+                                </select>
+                              </div>
+                              <div className="flex items-center justify-between w-full lg:w-auto gap-4">
+                                <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-xl border border-white/5 flex-1 lg:flex-none">
+                                  <span className="text-[9px] sm:text-[10px] font-bold text-muted uppercase">Points</span>
+                                  <input
+                                    type="number"
+                                    value={result.points || ''}
+                                    className="w-full lg:w-16 bg-transparent border-none text-sm font-bold text-maple text-center outline-none"
+                                    onChange={(e) => updateCulturalResult(result.id, { points: parseInt(e.target.value) || 0 })}
+                                  />
+                                </div>
+                                <button 
+                                  onClick={() => deleteCulturalResult(result.id)}
+                                  className="p-3 sm:p-2 text-danger/50 hover:text-danger hover:bg-danger/10 rounded-lg transition-all shrink-0"
+                                >
+                                  <Trash2 size={18} />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                          {displayCulturalResults.filter(r => r.category_id === selectedResultCategory).length === 0 && (
+                            <div className="py-12 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
+                              <p className="text-muted font-ui text-[10px] font-bold uppercase tracking-widest">No manual points assigned yet</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   ) : (
                     <div className="py-40 text-center card-glass">
@@ -1407,7 +1574,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                   className="space-y-8"
                 >
                   {/* Search & Filter Bar */}
-                  <div className="flex flex-col lg:flex-row items-center justify-between gap-6 bg-[#0d1b33] p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-white/5 shadow-2xl">
+                  <div className="flex flex-col lg:flex-row items-center justify-between gap-6 bg-[#0d1b33] p-5 sm:p-8 rounded-[2rem] sm:rounded-[2.5rem] border border-white/5 shadow-2xl max-w-full overflow-hidden">
                     <div className="w-full lg:flex-1 min-w-0 lg:min-w-[300px] relative group">
                       <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-muted group-focus-within:text-maple transition-colors" size={18} />
                       <input 
@@ -1418,46 +1585,61 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                         className="w-full bg-white/5 border border-white/5 focus:border-maple/50 focus:bg-white/10 rounded-xl sm:rounded-2xl py-4 sm:py-5 pl-14 sm:pl-16 pr-6 sm:pr-8 text-[12px] sm:text-sm outline-none transition-all placeholder:text-muted/50"
                       />
                     </div>
-                    <div className="w-full lg:w-auto flex items-center gap-4">
-                    <div className="flex items-center gap-2 bg-white/5 p-1 border border-white/5 rounded-xl sm:rounded-2xl overflow-x-auto no-scrollbar max-w-full w-full">
-                      <button
-                        onClick={() => setCategoryFilter('all')}
-                        className={cn(
-                          "px-4 sm:px-6 py-2 sm:py-3 font-ui text-[8px] sm:text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg sm:rounded-xl whitespace-nowrap",
-                          categoryFilter === 'all' ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
-                        )}
-                      >
-                        All Categories
-                      </button>
-                      {categories.map(cat => (
+                    <div className="w-full lg:w-auto flex items-center gap-4 max-w-full overflow-hidden">
+                      <div className="flex items-center flex-nowrap gap-2 bg-white/5 p-1 border border-white/5 rounded-xl sm:rounded-2xl overflow-x-auto no-scrollbar max-w-full w-full pb-2">
                         <button
-                          key={cat.id}
-                          onClick={() => setCategoryFilter(cat.id)}
+                          onClick={() => setCategoryFilter('all')}
                           className={cn(
-                            "px-4 sm:px-6 py-2 sm:py-3 font-ui text-[8px] sm:text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg sm:rounded-xl whitespace-nowrap",
-                            categoryFilter === cat.id ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
+                            "px-4 sm:px-6 py-2 sm:py-3 font-ui text-[8px] sm:text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg sm:rounded-xl whitespace-nowrap shrink-0",
+                            categoryFilter === 'all' ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
                           )}
                         >
-                          {cat.name}
+                          All Categories
                         </button>
-                      ))}
-                    </div>
-                      {/* Removed Create Match button as requested */}
+                        {displayCategories.map(cat => (
+                          <button
+                            key={cat.id}
+                            onClick={() => setCategoryFilter(cat.id)}
+                            className={cn(
+                              "px-4 sm:px-6 py-2 sm:py-3 font-ui text-[8px] sm:text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg sm:rounded-xl whitespace-nowrap shrink-0",
+                              categoryFilter === cat.id ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
+                            )}
+                          >
+                            {cat.name}
+                          </button>
+                        ))}
+                      </div>
+                      <button 
+                        onClick={() => addMatch(categoryFilter !== 'all' ? categoryFilter : undefined)}
+                        className="bg-maple hover:bg-maple/90 text-bg py-4 px-6 rounded-xl font-ui text-[10px] font-bold uppercase tracking-[0.2em] transition-all shadow-xl shadow-maple/20 flex items-center gap-2 shrink-0 active:scale-95"
+                      >
+                        <Plus size={16} />
+                        Add Match
+                      </button>
                     </div>
                   </div>
 
                   {/* Matches List - Grouped by Category and Grade */}
                   <div className="space-y-16 pb-20">
-                    {categories.map(cat => {
-                      const catMatches = filteredMatches.filter(m => m.category_id === cat.id);
-                      if (catMatches.length === 0 && categoryFilter !== 'all' && categoryFilter !== cat.id) return null;
-                      if (catMatches.length === 0 && categoryFilter === 'all' && searchQuery === '') return null;
-                      if (catMatches.length === 0 && searchQuery !== '') return null;
+                    {displayCategories.map(cat => {
+                      const catMatches = displayMatches.filter(m => m.category_id === cat.id);
+                      
+                      // Only show if category matches filter and search
+                      const matchesFilter = categoryFilter === 'all' || categoryFilter === cat.id;
+                      const matchesSearch = searchQuery === '' || 
+                        cat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        catMatches.some(m => 
+                          houses.find(h => h.id === m.team1_id)?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          houses.find(h => h.id === m.team2_id)?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          m.venue?.toLowerCase().includes(searchQuery.toLowerCase())
+                        );
+
+                      if (!matchesFilter || !matchesSearch) return null;
 
                       // Group matches by grade
                       const matchesByGrade: Record<string, Match[]> = {};
                       catMatches.forEach(m => {
-                        const grade = 'Unassigned Grade';
+                        const grade = m.eligible_years || 'Grade Not Set';
                         if (!matchesByGrade[grade]) matchesByGrade[grade] = [];
                         matchesByGrade[grade].push(m);
                       });
@@ -1513,9 +1695,9 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                                                 <span className="font-ui text-[8px] sm:text-[9px] font-bold text-muted uppercase tracking-widest">Match #</span>
                                                 <input
                                                   type="number"
-                                                  defaultValue={match.match_no}
+                                                  value={match.match_no || ''}
                                                   className="w-10 sm:w-12 bg-white/5 border border-white/5 rounded-lg text-white text-[10px] sm:text-xs font-bold text-center py-1 outline-none focus:border-maple transition-all"
-                                                  onBlur={(e) => updateMatch(match.id, { match_no: parseInt(e.target.value) })}
+                                                  onChange={(e) => updateMatch(match.id, { match_no: parseInt(e.target.value) || 0 })}
                                                 />
                                               </div>
                                             </div>
@@ -1525,30 +1707,30 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                                               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted/30" size={12} />
                                               <input
                                                 type="text"
-                                                defaultValue={match.venue || ''}
+                                                value={match.venue || ''}
                                                 placeholder="Venue"
                                                 className="w-full bg-white/5 border border-white/5 rounded-xl pl-9 pr-4 py-2.5 sm:py-3 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-muted outline-none focus:border-maple/50 focus:text-text transition-all"
-                                                onBlur={(e) => updateMatch(match.id, { venue: e.target.value })}
+                                                onChange={(e) => updateMatch(match.id, { venue: e.target.value })}
                                               />
                                             </div>
                                             <div className="relative">
                                               <Users className="absolute left-3 top-1/2 -translate-y-1/2 text-muted/30" size={12} />
                                               <input
                                                 type="text"
-                                                defaultValue={match.eligible_years || ''}
+                                                value={match.eligible_years || ''}
                                                 placeholder="Eligible Years"
                                                 className="w-full bg-white/5 border border-white/5 rounded-xl pl-9 pr-4 py-2.5 sm:py-3 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-muted outline-none focus:border-maple/50 focus:text-text transition-all"
-                                                onBlur={(e) => updateMatch(match.id, { eligible_years: e.target.value })}
+                                                onChange={(e) => updateMatch(match.id, { eligible_years: e.target.value })}
                                               />
                                             </div>
                                             <div className="relative">
                                               <Trophy className="absolute left-3 top-1/2 -translate-y-1/2 text-muted/30" size={12} />
                                               <input
                                                 type="text"
-                                                defaultValue={match.man_of_the_match || ''}
+                                                value={match.man_of_the_match || ''}
                                                 placeholder="Man of the Match"
                                                 className="w-full bg-white/5 border border-white/5 rounded-xl pl-9 pr-4 py-2.5 sm:py-3 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-muted outline-none focus:border-maple/50 focus:text-text transition-all"
-                                                onBlur={(e) => updateMatch(match.id, { man_of_the_match: e.target.value })}
+                                                onChange={(e) => updateMatch(match.id, { man_of_the_match: e.target.value })}
                                               />
                                             </div>
                                           </div>
@@ -1556,7 +1738,15 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
 
                                         {/* Teams & Score */}
                                         <div className="w-full flex-1 flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-8 bg-white/5 p-6 sm:p-8 rounded-[1.5rem] sm:rounded-[2rem] border border-white/5">
-                                          <div className="w-full sm:flex-1 text-center sm:text-right">
+                                          <div className="w-full sm:flex-1 flex flex-col items-center sm:items-end gap-3">
+                                            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-white/10 border-2 border-maple/30 overflow-hidden shrink-0 shadow-lg">
+                                              <img 
+                                                src={houses.find(h => h.id === match.team1_id)?.logo_url || ''} 
+                                                alt="Team 1" 
+                                                className="w-full h-full object-cover rounded-full"
+                                                referrerPolicy="no-referrer"
+                                              />
+                                            </div>
                                             <select
                                               value={match.team1_id || ''}
                                               onChange={(e) => updateMatch(match.id, { team1_id: e.target.value })}
@@ -1600,7 +1790,15 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                                             </select>
                                           </div>
 
-                                          <div className="w-full sm:flex-1 text-center sm:text-left">
+                                          <div className="w-full sm:flex-1 flex flex-col items-center sm:items-start gap-3">
+                                            <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-white/10 border-2 border-maple/30 overflow-hidden shrink-0 shadow-lg">
+                                              <img 
+                                                src={houses.find(h => h.id === match.team2_id)?.logo_url || ''} 
+                                                alt="Team 2" 
+                                                className="w-full h-full object-cover rounded-full"
+                                                referrerPolicy="no-referrer"
+                                              />
+                                            </div>
                                             <select
                                               value={match.team2_id || ''}
                                               onChange={(e) => updateMatch(match.id, { team2_id: e.target.value })}
@@ -1670,7 +1868,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                   </div>
 
                   <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
-                    {schedule.map((item) => (
+                    {displaySchedule.map((item) => (
                       <motion.div 
                         key={item.id} 
                         layout
@@ -1685,31 +1883,31 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                               <div className="flex items-center gap-3">
                                 <input
                                   type="text"
-                                  defaultValue={item.day_label}
+                                  value={item.day_label}
                                   className="w-20 bg-white/5 border border-white/5 rounded-lg font-ui text-[10px] font-bold uppercase tracking-[0.2em] text-maple outline-none focus:border-maple/50 px-2 py-1 transition-all"
-                                  onBlur={(e) => updateSchedule(item.id, { day_label: e.target.value })}
+                                  onChange={(e) => updateSchedule(item.id, { day_label: e.target.value })}
                                 />
                                 <input
                                   type="text"
-                                  defaultValue={item.day_date}
+                                  value={item.day_date}
                                   className="w-28 bg-white/5 border border-white/5 rounded-lg font-ui text-[10px] font-bold uppercase tracking-[0.2em] text-muted outline-none focus:border-maple/50 px-2 py-1 transition-all"
-                                  onBlur={(e) => updateSchedule(item.id, { day_date: e.target.value })}
+                                  onChange={(e) => updateSchedule(item.id, { day_date: e.target.value })}
                                 />
                               </div>
                               <div className="flex items-center gap-2">
                                 <Clock size={12} className="text-muted/30" />
                                 <input
                                   type="text"
-                                  defaultValue={item.time_start}
+                                  value={item.time_start}
                                   className="w-16 bg-transparent border-none font-ui text-[10px] font-bold uppercase tracking-widest text-subtle outline-none focus:text-white"
-                                  onBlur={(e) => updateSchedule(item.id, { time_start: e.target.value })}
+                                  onChange={(e) => updateSchedule(item.id, { time_start: e.target.value })}
                                 />
                                 <span className="text-subtle text-[10px] opacity-30">→</span>
                                 <input
                                   type="text"
-                                  defaultValue={item.time_end || ''}
+                                  value={item.time_end || ''}
                                   className="w-16 bg-transparent border-none font-ui text-[10px] font-bold uppercase tracking-widest text-subtle outline-none focus:text-white"
-                                  onBlur={(e) => updateSchedule(item.id, { time_end: e.target.value })}
+                                  onChange={(e) => updateSchedule(item.id, { time_end: e.target.value })}
                                 />
                               </div>
                             </div>
@@ -1725,16 +1923,16 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                         <div className="space-y-6 flex-1">
                           <input
                             type="text"
-                            defaultValue={item.title}
+                            value={item.title}
                             className="w-full bg-transparent border-none text-3xl font-display uppercase tracking-tighter text-white outline-none focus:text-maple transition-colors"
-                            onBlur={(e) => updateSchedule(item.id, { title: e.target.value })}
+                            onChange={(e) => updateSchedule(item.id, { title: e.target.value })}
                           />
                           <textarea
-                            defaultValue={item.subtitle || ''}
+                            value={item.subtitle || ''}
                             placeholder="Add a subtitle or description..."
                             className="w-full bg-white/5 border border-white/5 rounded-[1.5rem] p-6 text-muted text-sm leading-relaxed outline-none resize-none focus:border-maple/30 focus:text-text transition-all"
                             rows={3}
-                            onBlur={(e) => updateSchedule(item.id, { subtitle: e.target.value })}
+                            onChange={(e) => updateSchedule(item.id, { subtitle: e.target.value })}
                           />
                         </div>
 
@@ -1745,9 +1943,9 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                               <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-muted/30 group-focus-within/input:text-maple transition-colors" size={16} />
                               <input
                                 type="text"
-                                defaultValue={item.venue || ''}
+                                value={item.venue || ''}
                                 className="w-full bg-white/5 border border-white/5 rounded-2xl pl-12 pr-4 py-4 text-[11px] font-bold uppercase tracking-widest text-white outline-none focus:border-maple/50 transition-all"
-                                onBlur={(e) => updateSchedule(item.id, { venue: e.target.value })}
+                                onChange={(e) => updateSchedule(item.id, { venue: e.target.value })}
                               />
                             </div>
                           </div>
@@ -1817,9 +2015,14 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                       <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
-                      {categories.filter(c => c.category_type === 'sport' || !c.category_type).map((cat) => (
-                        <div key={cat.id}>
-                          <CategoryCard cat={cat} />
+                      {displayCategories.filter(c => c.category_type === 'sport' || !c.category_type).map((cat) => (
+                        <div key={cat.id} className="h-full">
+                          <CategoryCard 
+                            cat={cat} 
+                            deleteCategory={deleteCategory}
+                            updateCategory={updateCategory}
+                            handleSupabaseError={handleSupabaseError}
+                          />
                         </div>
                       ))}
                     </div>
@@ -1833,9 +2036,14 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                       <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
-                      {categories.filter(c => c.category_type === 'cultural').map((cat) => (
-                        <div key={cat.id}>
-                          <CategoryCard cat={cat} />
+                      {displayCategories.filter(c => c.category_type === 'cultural').map((cat) => (
+                        <div key={cat.id} className="h-full">
+                          <CategoryCard 
+                            cat={cat} 
+                            deleteCategory={deleteCategory}
+                            updateCategory={updateCategory}
+                            handleSupabaseError={handleSupabaseError}
+                          />
                         </div>
                       ))}
                     </div>
@@ -1877,7 +2085,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-10">
-                    {gallery.map((item) => (
+                    {displayGallery.map((item) => (
                       <motion.div 
                         key={item.id}
                         layout
@@ -1894,22 +2102,14 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                         <div className="p-8 space-y-4">
                           <input
                             type="text"
-                            defaultValue={item.title}
+                            value={item.title}
                             className="w-full bg-transparent border-none text-xl font-display uppercase tracking-widest text-white outline-none focus:text-maple"
-                            onBlur={async (e) => {
-                              if (!supabase) return;
-                              await supabase.from('gallery').update({ title: e.target.value }).eq('id', item.id);
-                              refresh();
-                            }}
+                            onChange={(e) => updateGalleryItem(item.id, { title: e.target.value })}
                           />
                           <div className="flex items-center gap-4">
                             <select
                               value={item.type}
-                              onChange={async (e) => {
-                                if (!supabase) return;
-                                await supabase.from('gallery').update({ type: e.target.value }).eq('id', item.id);
-                                refresh();
-                              }}
+                              onChange={(e) => updateGalleryItem(item.id, { type: e.target.value })}
                               className="bg-white/5 border border-white/5 rounded-xl px-4 py-2 font-ui text-[9px] font-bold uppercase tracking-[0.2em] text-muted outline-none"
                             >
                               <option value="image" className="bg-[#0d1b33]">Image</option>
@@ -1917,13 +2117,9 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                             </select>
                             <input
                               type="text"
-                              defaultValue={item.year}
+                              value={item.year}
                               className="w-20 bg-white/5 border border-white/5 rounded-xl px-4 py-2 font-ui text-[9px] font-bold uppercase tracking-[0.2em] text-muted outline-none"
-                              onBlur={async (e) => {
-                                if (!supabase) return;
-                                await supabase.from('gallery').update({ year: e.target.value }).eq('id', item.id);
-                                refresh();
-                              }}
+                              onChange={(e) => updateGalleryItem(item.id, { year: e.target.value })}
                             />
                           </div>
                         </div>
@@ -1984,47 +2180,6 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                 </motion.div>
               )}
 
-              {activeTab === 'spreadsheet' && (
-                <motion.div
-                  key="spreadsheet"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  className="h-[calc(100vh-250px)] sm:h-[calc(100vh-200px)] flex flex-col gap-6 sm:gap-8"
-                >
-                  <div className="flex flex-col sm:flex-row items-center justify-between bg-[#0d1b33] p-6 sm:p-10 rounded-[2rem] sm:rounded-[3rem] border border-white/5 shadow-2xl gap-6">
-                    <div>
-                      <h2 className="text-2xl sm:text-4xl font-display uppercase tracking-tighter text-white">Data Spreadsheet</h2>
-                      <p className="text-muted text-[10px] font-bold uppercase tracking-[0.3em] mt-3 opacity-60">Embedded Google Sheet for detailed management</p>
-                    </div>
-                    <a 
-                      href={localSettings['spreadsheet_url'] || '#'} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="w-full sm:w-auto bg-white/5 hover:bg-white/10 text-white py-4 sm:py-5 px-8 sm:px-12 rounded-2xl font-ui text-[11px] font-bold uppercase tracking-[0.2em] transition-all border border-white/10 flex items-center justify-center gap-3 group active:scale-95"
-                    >
-                      <ExternalLink size={18} />
-                      Open Full Sheet
-                    </a>
-                  </div>
-                  
-                  <div className="flex-1 bg-[#0d1b33] border border-white/5 rounded-[2rem] sm:rounded-[3rem] overflow-hidden shadow-2xl relative min-h-[400px]">
-                    {localSettings['spreadsheet_url'] ? (
-                      <iframe 
-                        src={getEmbedUrl(localSettings['spreadsheet_url'])} 
-                        className="w-full h-full border-none"
-                        title="Spreadsheet"
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center text-muted gap-4">
-                        <FileText size={64} className="opacity-10" />
-                        <p className="font-ui text-xs font-bold uppercase tracking-widest">No spreadsheet URL configured in settings</p>
-                      </div>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-
               {activeTab === 'notices' && (
                 <motion.div
                   key="notices"
@@ -2051,7 +2206,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-10">
-                    {notices.map(notice => (
+                    {displayNotices.map(notice => (
                       <motion.div 
                         key={notice.id} 
                         layout
@@ -2110,7 +2265,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                       </motion.div>
                     ))}
 
-                    {notices.length === 0 && (
+                    {displayNotices.length === 0 && (
                       <div className="col-span-full py-40 flex flex-col items-center justify-center bg-[#0d1b33] border border-white/5 border-dashed rounded-[4rem] text-muted gap-6">
                         <Bell size={80} className="opacity-10" />
                         <div className="text-center">

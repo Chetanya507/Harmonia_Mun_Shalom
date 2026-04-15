@@ -12,9 +12,10 @@ interface LayoutProps {
   announcement?: string;
   footerText?: string;
   schoolLogoUrl?: string;
+  profile?: any;
 }
 
-export default function Layout({ children, activeTab, setActiveTab, title, subtitle, announcement, footerText, schoolLogoUrl }: LayoutProps) {
+export default function Layout({ children, activeTab, setActiveTab, title, subtitle, announcement, footerText, schoolLogoUrl, profile }: LayoutProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navItems = [
@@ -26,6 +27,10 @@ export default function Layout({ children, activeTab, setActiveTab, title, subti
     { id: 'notices', label: 'Notices', href: '#notices' },
     { id: 'gallery', label: 'Gallery', href: '#gallery' },
   ];
+
+  if (profile?.is_super_admin) {
+    navItems.push({ id: 'admin', label: 'Admin', href: '#admin' });
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-bg text-text selection:bg-maple selection:text-bg">
@@ -148,7 +153,7 @@ export default function Layout({ children, activeTab, setActiveTab, title, subti
           <div className="w-full h-px bg-border my-4" />
 
           <div className="flex flex-col md:flex-row justify-between w-full gap-4 font-sans text-[12px] text-subtle">
-            <span>© 2026 Shalom Hills International School</span>
+            <span>© 2026 Shalom Hills International School | Made by Ean Kotadia and Hardik Batra</span>
           </div>
         </div>
       </footer>

@@ -3,6 +3,7 @@ import Layout from './components/Layout';
 import MatchCard from './components/MatchCard';
 import ScheduleCard from './components/ScheduleCard';
 import EventsSection from './components/EventsSection';
+import AdminPanel from './components/AdminPanel';
 import { useUCSFData } from './hooks/useUCSFData';
 import { Match } from './types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -19,7 +20,7 @@ export default function App() {
   const [expandedNoticeId, setExpandedNoticeId] = useState<number | null>(null);
   const [selectedLeaderboardGrade, setSelectedLeaderboardGrade] = useState<'all' | '7-8th' | '9-10th' | '11th' | '12th'>('all');
   const [selectedLeaderboardEventId, setSelectedLeaderboardEventId] = useState<string | 'all'>('all');
-  const { houses, matches, schedule, settings, categories, gallery, notices, culturalResults, loading, error, refresh } = useUCSFData();
+  const { houses, matches, schedule, settings, categories, gallery, notices, culturalResults, stagedChanges, profile, loading, error, refresh } = useUCSFData();
   const liveItems = React.useMemo(() => schedule.filter(s => s.status === 'live'), [schedule]);
   const upcomingItems = React.useMemo(() => schedule.filter(s => s.status === 'upcoming').slice(0, 3), [schedule]);
 
@@ -455,17 +456,17 @@ export default function App() {
             <div className="mb-16 flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
               <div>
                 <p className="sec-label">Announcements</p>
-                <h2 className="text-6xl md:text-7xl">Official Notices</h2>
+                <h2 className="text-4xl sm:text-6xl md:text-7xl">Official Notices</h2>
                 <p className="text-white/40 mt-4">Stay updated with the latest fest news and alerts.</p>
               </div>
               
-              <div className="flex items-center gap-2 bg-white/5 p-1 border border-border rounded-lg">
+              <div className="flex items-center flex-nowrap gap-2 bg-white/5 p-1 border border-border rounded-lg overflow-x-auto no-scrollbar pb-2">
                 {['all', 'high', 'medium', 'low'].map((p) => (
                   <button
                     key={p}
                     onClick={() => setNoticePriority(p as any)}
                     className={cn(
-                      "px-6 py-2 font-ui text-[11px] font-bold uppercase tracking-widest transition-all rounded-md",
+                      "px-6 py-2 font-ui text-[11px] font-bold uppercase tracking-widest transition-all rounded-md whitespace-nowrap shrink-0",
                       noticePriority === p ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
                     )}
                   >
@@ -553,17 +554,17 @@ export default function App() {
             <div className="mb-16 flex flex-col md:flex-row md:items-end justify-between gap-8">
               <div>
                 <p className="sec-label">Moments</p>
-                <h2 className="text-6xl md:text-7xl">Gallery</h2>
+                <h2 className="text-4xl sm:text-6xl md:text-7xl">Gallery</h2>
                 <p className="text-white/40 mt-4">Relive the highlights of UCSF 2025 & 2026.</p>
               </div>
               
-              <div className="flex items-center gap-2 bg-white/5 p-1 border border-border rounded-lg self-start">
+              <div className="flex items-center flex-nowrap gap-2 bg-white/5 p-1 border border-border rounded-lg self-start overflow-x-auto no-scrollbar pb-2 w-full max-w-full">
                 {['all', 2026, 2025].map((year) => (
                   <button
                     key={year}
                     onClick={() => setGalleryYear(year as any)}
                     className={cn(
-                      "px-6 py-2 font-ui text-[11px] font-bold uppercase tracking-widest transition-all rounded-md",
+                      "px-6 py-2 font-ui text-[11px] font-bold uppercase tracking-widest transition-all rounded-md whitespace-nowrap shrink-0",
                       galleryYear === year ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
                     )}
                   >
@@ -640,12 +641,12 @@ export default function App() {
             <div className="mb-16 flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
               <div>
                 <p className="sec-label">Rankings</p>
-                <h2 className="text-6xl md:text-7xl">Leaderboards</h2>
+                <h2 className="text-4xl sm:text-6xl md:text-7xl">Leaderboards</h2>
                 <p className="text-white/40 mt-4">Current standings of all dynasties across UCSF 2026.</p>
               </div>
               
-              <div className="flex flex-col gap-4 w-full md:w-auto">
-                <div className="flex items-center gap-2 bg-white/5 p-1 border border-border rounded-lg overflow-x-auto no-scrollbar">
+              <div className="flex flex-col gap-4 w-full md:w-auto max-w-full overflow-hidden">
+                <div className="flex items-center flex-nowrap gap-2 bg-white/5 p-1 border border-border rounded-lg overflow-x-auto no-scrollbar pb-2 w-full">
                   {['all', '7-8th', '9-10th', '11th', '12th'].map((grade) => (
                     <button
                       key={grade}
@@ -654,7 +655,7 @@ export default function App() {
                         setSelectedLeaderboardEventId('all');
                       }}
                       className={cn(
-                        "px-4 py-2 font-ui text-[10px] font-bold uppercase tracking-widest transition-all rounded-md whitespace-nowrap",
+                        "px-4 py-2 font-ui text-[10px] font-bold uppercase tracking-widest transition-all rounded-md whitespace-nowrap shrink-0",
                         selectedLeaderboardGrade === grade && selectedLeaderboardEventId === 'all' ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
                       )}
                     >
@@ -663,14 +664,14 @@ export default function App() {
                   ))}
                 </div>
 
-                <div className="flex items-center gap-2 bg-white/5 p-1 border border-border rounded-lg overflow-x-auto no-scrollbar">
+                <div className="flex items-center flex-nowrap gap-2 bg-white/5 p-1 border border-border rounded-lg overflow-x-auto no-scrollbar pb-2 w-full">
                   <button
                     onClick={() => {
                       setSelectedLeaderboardEventId('all');
                       setSelectedLeaderboardGrade('all');
                     }}
                     className={cn(
-                      "px-4 py-2 font-ui text-[10px] font-bold uppercase tracking-widest transition-all rounded-md whitespace-nowrap",
+                      "px-4 py-2 font-ui text-[10px] font-bold uppercase tracking-widest transition-all rounded-md whitespace-nowrap shrink-0",
                       selectedLeaderboardEventId === 'all' ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
                     )}
                   >
@@ -684,7 +685,7 @@ export default function App() {
                         setSelectedLeaderboardGrade('all');
                       }}
                       className={cn(
-                        "px-4 py-2 font-ui text-[10px] font-bold uppercase tracking-widest transition-all rounded-md whitespace-nowrap",
+                        "px-4 py-2 font-ui text-[10px] font-bold uppercase tracking-widest transition-all rounded-md whitespace-nowrap shrink-0",
                         selectedLeaderboardEventId === cat.id ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
                       )}
                     >
@@ -710,11 +711,11 @@ export default function App() {
                     className="card-glass p-8 flex flex-col items-center text-center gap-6 group"
                   >
                     <div className="relative">
-                      <div className="w-24 h-24 rounded-full bg-white/5 border border-border flex items-center justify-center overflow-hidden p-4">
+                      <div className="w-24 h-24 rounded-full bg-white/10 border-2 border-maple/30 flex items-center justify-center overflow-hidden shadow-2xl shadow-maple/10">
                         <img 
                           src={house.logo_url || ''} 
                           alt={house.name} 
-                          className="w-full h-full object-contain"
+                          className="w-full h-full object-cover rounded-full"
                           referrerPolicy="no-referrer"
                         />
                       </div>
@@ -781,6 +782,25 @@ export default function App() {
           </div>
         );
 
+      case 'admin':
+        return (
+          <div className="max-w-[1600px] mx-auto px-4 py-12">
+            <AdminPanel 
+              matches={matches} 
+              houses={houses} 
+              schedule={schedule}
+              categories={categories}
+              notices={notices}
+              gallery={gallery}
+              culturalResults={culturalResults}
+              stagedChanges={stagedChanges}
+              profile={profile}
+              settings={settings}
+              refresh={refresh} 
+            />
+          </div>
+        );
+
       default:
         return null;
     }
@@ -795,6 +815,7 @@ export default function App() {
       announcement={announcementText}
       footerText={footerText}
       schoolLogoUrl={schoolLogoUrl}
+      profile={profile}
     >
       <AnimatePresence mode="wait">
         <motion.div

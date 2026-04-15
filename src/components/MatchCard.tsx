@@ -28,11 +28,11 @@ const MatchCard = React.memo(({ match, compact, onClick }: MatchCardProps) => {
       >
         <div className="flex items-center gap-3">
           <div className="flex -space-x-2">
-            <div className="w-8 h-8 rounded-full bg-white/5 border border-border flex items-center justify-center overflow-hidden">
-              <img src={match.team1?.logo_url || ''} alt={match.team1?.name} className="w-full h-full object-contain p-1" referrerPolicy="no-referrer" />
+            <div className="w-8 h-8 rounded-full bg-white/10 border border-maple/30 flex items-center justify-center overflow-hidden shadow-lg">
+              <img src={match.team1?.logo_url || ''} alt={match.team1?.name} className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
             </div>
-            <div className="w-8 h-8 rounded-full bg-white/5 border border-border flex items-center justify-center overflow-hidden">
-              <img src={match.team2?.logo_url || ''} alt={match.team2?.name} className="w-full h-full object-contain p-1" referrerPolicy="no-referrer" />
+            <div className="w-8 h-8 rounded-full bg-white/10 border border-maple/30 flex items-center justify-center overflow-hidden shadow-lg">
+              <img src={match.team2?.logo_url || ''} alt={match.team2?.name} className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
             </div>
           </div>
           <div className="flex flex-col">
@@ -97,14 +97,14 @@ const MatchCard = React.memo(({ match, compact, onClick }: MatchCardProps) => {
           {/* Team 1 */}
           <div className="flex-1 flex flex-col items-center text-center gap-3 group/team">
             <div 
-              className="w-16 h-16 flex items-center justify-center relative transition-transform group-hover/team:scale-110 overflow-hidden"
+              className="w-16 h-16 rounded-full bg-white/10 border-2 border-maple/30 flex items-center justify-center relative transition-transform group-hover/team:scale-110 overflow-hidden shadow-xl"
             >
               <div className="absolute inset-0 blur-xl opacity-20" style={{ backgroundColor: match.team1?.color }} />
               {match.team1?.logo_url ? (
                 <img 
                   src={match.team1?.logo_url} 
                   alt={match.team1?.name} 
-                  className="w-full h-full object-contain relative z-10 p-2" 
+                  className="w-full h-full object-cover rounded-full relative z-10" 
                   referrerPolicy="no-referrer"
                 />
               ) : (
@@ -136,14 +136,14 @@ const MatchCard = React.memo(({ match, compact, onClick }: MatchCardProps) => {
           {/* Team 2 */}
           <div className="flex-1 flex flex-col items-center text-center gap-3 group/team">
             <div 
-              className="w-16 h-16 flex items-center justify-center relative transition-transform group-hover/team:scale-110 overflow-hidden"
+              className="w-16 h-16 rounded-full bg-white/10 border-2 border-maple/30 flex items-center justify-center relative transition-transform group-hover/team:scale-110 overflow-hidden shadow-xl"
             >
               <div className="absolute inset-0 blur-xl opacity-20" style={{ backgroundColor: match.team2?.color }} />
               {match.team2?.logo_url ? (
                 <img 
                   src={match.team2?.logo_url} 
                   alt={match.team2?.name} 
-                  className="w-full h-full object-contain relative z-10 p-2" 
+                  className="w-full h-full object-cover rounded-full relative z-10" 
                   referrerPolicy="no-referrer"
                 />
               ) : (
