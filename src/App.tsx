@@ -3,17 +3,15 @@ import Layout from './components/Layout';
 import MatchCard from './components/MatchCard';
 import ScheduleCard from './components/ScheduleCard';
 import EventsSection from './components/EventsSection';
-import AdminPanel from './components/AdminPanel';
 import { useUCSFData } from './hooks/useUCSFData';
 import { Match } from './types';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trophy, Activity, Calendar, Shield, Loader2, AlertCircle, ChevronRight, Play, Image as ImageIcon, Video, ExternalLink, Bell, Info, FileText, Filter, ChevronDown, ChevronUp, Users } from 'lucide-react';
+import { Trophy, Activity, Calendar, Shield, Loader2, AlertCircle, ChevronRight, Play, Image as ImageIcon, Video, ExternalLink, Bell, Info, FileText, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { cn } from './lib/utils';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
-  const [scheduleTab, setScheduleTab] = useState<'sports' | 'cultural' | 'selected'>('sports');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<string | null>(null);
   const [galleryYear, setGalleryYear] = useState<'all' | 2025 | 2026>('all');
@@ -22,16 +20,19 @@ export default function App() {
   const [selectedLeaderboardGrade, setSelectedLeaderboardGrade] = useState<'all' | '7-8th' | '9-10th' | '11th' | '12th'>('all');
   const [selectedLeaderboardEventId, setSelectedLeaderboardEventId] = useState<string | 'all'>('all');
   const { houses, matches, schedule, settings, categories, gallery, notices, culturalResults, stagedChanges, profile, loading, error, refresh } = useUCSFData();
+  
   const liveItems = React.useMemo(() => schedule.filter(s => s.status === 'live'), [schedule]);
   const upcomingItems = React.useMemo(() => schedule.filter(s => s.status === 'upcoming').slice(0, 3), [schedule]);
 
   const gradePoints = React.useMemo(() => {
     const points: Record<string, Record<string, number>> = {};
     houses.forEach(h => {
-      points[h.id] = { '7-8th': 0, '9-10th': 0, '11th': 0, '12th': 0, 'all': h.points };
+      // 'all' category should just use the pre-computed points from the database
+      // to match the Admin Panel's source of truth.
+      points[h.id] = { '7-8th': 0, '9-10th': 0, '11th': 0, '12th': 0, 'all': h.points || 0 };
     });
 
-    // Sports Points
+    // Sports Points (Grade-specific)
     matches.filter(m => m.status === 'completed' && m.winner_id).forEach(m => {
       const winnerId = m.winner_id!;
       const grade = m.eligible_years;
@@ -48,27 +49,11 @@ export default function App() {
       }
     });
 
-    // Cultural Points
-    culturalResults.forEach(r => {
-      if (points[r.house_id]) {
-        const grade = r.eligible_years;
-        if (grade) {
-          let category = '';
-          if (grade.includes('7') || grade.includes('8')) category = '7-8th';
-          else if (grade.includes('9') || grade.includes('10')) category = '9-10th';
-          else if (grade.includes('11')) category = '11th';
-          else if (grade.includes('12')) category = '12th';
-          
-          if (category && points[r.house_id][category] !== undefined) {
-            points[r.house_id][category] += (r.points || 0);
-          }
-        }
-        points[r.house_id]['all'] += (r.points || 0);
-      }
-    });
+    // We don't add culturalResults to 'all' here because h.points already includes them
+    // after the admin recomputes points.
 
     return points;
-  }, [houses, matches, culturalResults]);
+  }, [houses, matches]);
 
   const eventPoints = React.useMemo(() => {
     if (selectedLeaderboardEventId === 'all') return null;
@@ -158,8 +143,6 @@ export default function App() {
 
   const getEmbedUrl = (url: string) => {
     if (!url) return '';
-    
-    // Google Sheets
     if (url.includes('docs.google.com/spreadsheets')) {
       if (url.includes('/edit')) {
         return url.split('/edit')[0] + '/preview';
@@ -168,29 +151,13 @@ export default function App() {
         return url + (url.includes('?') ? '&' : '?') + 'rm=minimal';
       }
     }
-    
-    // Google Drive (PDFs, Docs, etc)
-    if (url.includes('drive.google.com')) {
-      if (url.includes('/view')) {
-        return url.replace('/view', '/preview');
-      }
-      if (url.includes('/edit')) {
-        return url.replace('/edit', '/preview');
-      }
-    }
-
-    // Direct PDF links or other files - use Google Docs Viewer for better compatibility
-    if (url.toLowerCase().endsWith('.pdf') || url.toLowerCase().includes('.pdf?')) {
-      return `https://docs.google.com/viewer?url=${encodeURIComponent(url)}&embedded=true`;
-    }
-
     return url;
   };
 
   const renderContent = () => {
     switch (activeTab) {
       case 'events':
-        return <EventsSection categories={categories} matches={matches} culturalResults={culturalResults} setActiveTab={setActiveTab} />;
+        return <EventsSection categories={categories} matches={matches} setActiveTab={setActiveTab} />;
       case 'home':
         return (
           <div className="space-y-0">
@@ -443,140 +410,38 @@ export default function App() {
         );
 
       case 'schedule':
-        const filteredSchedule = schedule.filter(item => {
-          if (scheduleTab === 'selected') return item.type === 'selected';
-          if (scheduleTab === 'sports') return item.type === 'sport' || (!item.type && (!categories.find(c => c.name === item.category) || categories.find(c => c.name === item.category)?.category_type === 'sport'));
-          if (scheduleTab === 'cultural') return item.type === 'cultural' || (!item.type && categories.find(c => c.name === item.category)?.category_type === 'cultural');
-          return true;
-        });
-
-        const days = Array.from(new Set(filteredSchedule.map(s => s.day_label)));
-        
-        const sportsUrl = settings['sports_schedule_url'];
-        const culturalUrl = settings['culture_schedule_url'];
-        const selectedUrl = settings['selected_students_url'];
-
-        const renderIframe = (url: string | undefined, title: string) => {
-          if (!url) return null;
-          const isPdf = url.toLowerCase().endsWith('.pdf') || url.toLowerCase().includes('.pdf?');
-          
-          return (
-            <div className="space-y-4 mt-12">
-              <div className="flex justify-end">
-                <a 
-                  href={url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl font-ui text-[10px] font-bold uppercase tracking-widest text-muted hover:text-text transition-all"
-                >
-                  <ExternalLink size={14} />
-                  {isPdf ? 'Download PDF' : 'Open in New Tab'}
-                </a>
-              </div>
-              <div className="card-glass h-[800px] overflow-hidden shadow-2xl relative">
-                <iframe 
-                  src={getEmbedUrl(url)} 
-                  className="w-full h-full border-none"
-                  title={title}
-                />
-              </div>
-            </div>
-          );
-        };
-
+        const days = Array.from(new Set(schedule.map(s => s.day_label)));
         return (
-          <div id="schedule" className="max-w-7xl mx-auto px-6 py-24 relative z-10">
-            <div className="mb-16">
+          <div id="schedule" className="max-w-7xl mx-auto px-6 py-32 relative z-10">
+            <div className="mb-20">
               <p className="sec-label">Event Schedule</p>
               <h2 className="text-6xl md:text-8xl">The Timeline</h2>
-              <div className="flex flex-wrap gap-4 mt-8">
-                {[
-                  { id: 'sports', label: 'Sports Schedule' },
-                  { id: 'cultural', label: 'Culture Schedule' },
-                  { id: 'selected', label: 'Selected Students' }
-                ].map(tab => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setScheduleTab(tab.id as any)}
-                    className={cn(
-                      "px-8 py-3 rounded-2xl font-ui text-[11px] font-bold uppercase tracking-[0.2em] transition-all border",
-                      scheduleTab === tab.id 
-                        ? "bg-maple text-bg border-maple shadow-xl shadow-maple/20" 
-                        : "bg-white/5 text-muted border-white/5 hover:bg-white/10"
-                    )}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
+              <p className="text-muted mt-4 text-lg">Full Three-Day Programme — UCSF 2026</p>
             </div>
             
-            {scheduleTab === 'selected' ? (
-              <div className="space-y-12">
-                {selectedUrl && renderIframe(selectedUrl, "Selected Students")}
-                
-                {days.length > 0 ? days.map(day => (
-                  <div key={day} className="space-y-16">
-                    <div className="flex items-end gap-6 border-b border-border pb-6">
-                      <h3 className="text-5xl text-maple uppercase tracking-wider">{day}</h3>
-                      <span className="font-ui text-sm font-bold uppercase tracking-[0.3em] text-muted mb-2">
-                        {filteredSchedule.find(s => s.day_label === day)?.day_date}
-                      </span>
-                    </div>
-                    <div className="timeline">
-                      {filteredSchedule.filter(s => s.day_label === day).map((item, idx) => (
-                        <ScheduleCard 
-                          key={item.id} 
-                          item={item} 
-                          index={idx} 
-                          category={categories.find(c => c.name === item.category)}
-                          onCategoryClick={() => setActiveTab('events')}
-                        />
-                      ))}
-                    </div>
+            <div className="space-y-32">
+              {days.map(day => (
+                <div key={day} className="space-y-16">
+                  <div className="flex items-end gap-6 border-b border-border pb-6">
+                    <h3 className="text-5xl text-maple uppercase tracking-wider">{day}</h3>
+                    <span className="font-ui text-sm font-bold uppercase tracking-[0.3em] text-muted mb-2">
+                      {schedule.find(s => s.day_label === day)?.day_date}
+                    </span>
                   </div>
-                )) : !selectedUrl && (
-                  <div className="card-glass p-12 text-center">
-                    <Users size={48} className="mx-auto text-maple/40 mb-6" />
-                    <h3 className="text-3xl font-display uppercase tracking-wider mb-4">Selected Students</h3>
-                    <p className="text-muted max-w-md mx-auto">The list of students selected for various events will be updated here soon.</p>
+                  <div className="timeline">
+                    {schedule.filter(s => s.day_label === day).map((item, idx) => (
+                      <ScheduleCard 
+                        key={item.id} 
+                        item={item} 
+                        index={idx} 
+                        category={categories.find(c => c.name === item.category)}
+                        onCategoryClick={() => setActiveTab('events')}
+                      />
+                    ))}
                   </div>
-                )}
-              </div>
-            ) : (
-              <div className="space-y-32">
-                {scheduleTab === 'sports' && sportsUrl && renderIframe(sportsUrl, "Sports Schedule")}
-                {scheduleTab === 'cultural' && culturalUrl && renderIframe(culturalUrl, "Culture Schedule")}
-                
-                {/* Fallback to manual schedule if no URL or in addition to it */}
-                {days.length > 0 ? days.map(day => (
-                  <div key={day} className="space-y-16">
-                    <div className="flex items-end gap-6 border-b border-border pb-6">
-                      <h3 className="text-5xl text-maple uppercase tracking-wider">{day}</h3>
-                      <span className="font-ui text-sm font-bold uppercase tracking-[0.3em] text-muted mb-2">
-                        {filteredSchedule.find(s => s.day_label === day)?.day_date}
-                      </span>
-                    </div>
-                    <div className="timeline">
-                      {filteredSchedule.filter(s => s.day_label === day).map((item, idx) => (
-                        <ScheduleCard 
-                          key={item.id} 
-                          item={item} 
-                          index={idx} 
-                          category={categories.find(c => c.name === item.category)}
-                          onCategoryClick={() => setActiveTab('events')}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )) : (!((scheduleTab === 'sports' && sportsUrl) || (scheduleTab === 'cultural' && culturalUrl)) && (
-                  <div className="py-32 text-center card-glass">
-                    <Calendar size={48} className="mx-auto text-muted mb-6" />
-                    <p className="font-ui text-sm font-bold text-muted uppercase tracking-widest">No events scheduled for this category yet.</p>
-                  </div>
-                ))}
-              </div>
-            )}
+                </div>
+              ))}
+            </div>
           </div>
         );
 
@@ -873,22 +738,43 @@ export default function App() {
           </div>
         );
 
-      case 'admin':
+      case 'spreadsheet':
+        const spreadsheetUrl = settings['spreadsheet_url'];
         return (
-          <div className="max-w-[1600px] mx-auto px-4 py-12">
-            <AdminPanel 
-              matches={matches} 
-              houses={houses} 
-              schedule={schedule}
-              categories={categories}
-              notices={notices}
-              gallery={gallery}
-              culturalResults={culturalResults}
-              stagedChanges={stagedChanges}
-              profile={profile}
-              settings={settings}
-              refresh={refresh} 
-            />
+          <div className="max-w-7xl mx-auto px-6 py-24">
+            <div className="mb-16 flex flex-col md:flex-row md:items-end justify-between gap-8">
+              <div>
+                <p className="sec-label">Management</p>
+                <h2 className="text-6xl md:text-7xl">Data Sheet</h2>
+                <p className="text-white/40 mt-4">Detailed event and participant management via Google Sheets.</p>
+              </div>
+              {spreadsheetUrl && (
+                <a 
+                  href={spreadsheetUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="btn-primary flex items-center gap-3"
+                >
+                  <ExternalLink size={20} />
+                  Open Full Sheet
+                </a>
+              )}
+            </div>
+
+            <div className="card-glass h-[800px] overflow-hidden shadow-2xl relative">
+              {spreadsheetUrl ? (
+                <iframe 
+                  src={getEmbedUrl(spreadsheetUrl)} 
+                  className="w-full h-full border-none"
+                  title="Data Spreadsheet"
+                />
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-muted gap-4">
+                  <FileText size={64} className="opacity-10" />
+                  <p className="font-ui text-sm font-bold uppercase tracking-widest">No spreadsheet URL configured</p>
+                </div>
+              )}
+            </div>
           </div>
         );
 

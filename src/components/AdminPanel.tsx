@@ -41,14 +41,28 @@ const CategoryCard = ({
   cat, 
   deleteCategory, 
   updateCategory,
-  handleSupabaseError
+  handleSupabaseError,
+  culturalResults,
+  houses,
+  addCulturalResult,
+  updateCulturalResult,
+  deleteCulturalResult
 }: { 
   cat: Category, 
   deleteCategory: (id: string) => void, 
   updateCategory: (id: string, updates: Partial<Category>) => void,
-  handleSupabaseError: (err: any, context: string) => void
+  handleSupabaseError: (err: any, context: string) => void,
+  culturalResults: CulturalResult[],
+  houses: House[],
+  addCulturalResult: (catId: string) => void,
+  updateCulturalResult: (id: number, updates: Partial<CulturalResult>) => void,
+  deleteCulturalResult: (id: number) => void
 }) => {
   const [loading, setLoading] = useState(false);
+  const [showDynasty, setShowDynasty] = useState(false);
+  
+  const catResults = culturalResults.filter(r => r.category_id === cat.id);
+
   return (
     <motion.div 
       layout
@@ -251,6 +265,64 @@ const CategoryCard = ({
           ))}
         </div>
       </div>
+
+      {cat.category_type === 'cultural' && (
+        <div className="col-span-2 pt-8 border-t border-white/5 space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Trophy size={18} className="text-maple" />
+              <h4 className="font-display text-lg uppercase tracking-wider text-white">Dynasty Points</h4>
+            </div>
+            <button 
+              onClick={() => addCulturalResult(cat.id)}
+              className="bg-maple/10 hover:bg-maple/20 text-maple py-2 px-4 rounded-lg font-ui text-[9px] font-bold uppercase tracking-widest transition-all border border-maple/20 flex items-center gap-2"
+            >
+              <Plus size={14} /> Add Entry
+            </button>
+          </div>
+
+          <div className="space-y-3">
+            {catResults.sort((a, b) => (a.rank || 0) - (b.rank || 0)).map((result) => (
+              <div key={result.id} className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
+                <div className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center font-display text-sm text-maple shrink-0">
+                  <input
+                    type="number"
+                    value={result.rank || ''}
+                    placeholder="R"
+                    className="w-full bg-transparent border-none text-center outline-none"
+                    onChange={(e) => updateCulturalResult(result.id, { rank: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <select
+                  value={result.house_id}
+                  onChange={(e) => updateCulturalResult(result.id, { house_id: e.target.value })}
+                  className="flex-1 bg-transparent border-none text-[10px] font-bold uppercase tracking-widest text-white outline-none"
+                >
+                  {houses.map(h => <option key={h.id} value={h.id} className="bg-bg-dark">{h.name}</option>)}
+                </select>
+                <div className="flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/5">
+                  <span className="text-[8px] font-bold text-muted uppercase">Pts</span>
+                  <input
+                    type="number"
+                    value={result.points || ''}
+                    className="w-10 bg-transparent border-none text-[10px] font-bold text-maple text-center outline-none"
+                    onChange={(e) => updateCulturalResult(result.id, { points: parseInt(e.target.value) || 0 })}
+                  />
+                </div>
+                <button 
+                  onClick={() => deleteCulturalResult(result.id)}
+                  className="p-2 text-danger/50 hover:text-danger rounded-lg transition-all"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+            {catResults.length === 0 && (
+              <p className="text-center py-4 text-[9px] font-bold text-muted uppercase tracking-widest opacity-40">No dynasty points entered yet</p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   </motion.div>
   );
@@ -270,9 +342,10 @@ interface AdminPanelProps {
   profile: Profile | null;
   settings: Record<string, string>;
   refresh: () => void;
+  onBack?: () => void;
 }
 
-export default function AdminPanel({ matches, houses, schedule, categories, notices, gallery, culturalResults, stagedChanges, profile, settings, refresh }: AdminPanelProps) {
+export default function AdminPanel({ matches, houses, schedule, categories, notices, gallery, culturalResults, stagedChanges, profile, settings, refresh, onBack }: AdminPanelProps) {
   const [session, setSession] = useState<any>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -280,7 +353,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [discardKey, setDiscardKey] = useState(0);
-  const [pendingChanges, setPendingChanges] = useState<Record<string, Record<string | number, any>>>({
+  const [pendingChanges, setPendingChanges] = useState<Record<string, Record<string, any>>>({
     categories: {},
     matches: {},
     schedule: {},
@@ -291,113 +364,86 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
     settings: {}
   });
 
-  const [stagedAdditions, setStagedAdditions] = useState<Record<string, any[]>>({
-    categories: [],
-    matches: [],
-    schedule: [],
-    notices: [],
-    cultural_results: [],
-    gallery: []
-  });
-
-  const [stagedDeletions, setStagedDeletions] = useState<Record<string, (string | number)[]>>({
-    categories: [],
-    matches: [],
-    schedule: [],
-    notices: [],
-    cultural_results: [],
-    gallery: []
-  });
-
   // Merged data for live preview
   const displayCategories = useMemo(() => {
-    const base = categories
-      .filter(c => !stagedDeletions.categories.includes(c.id))
-      .map(cat => ({
-        ...cat,
-        ...(pendingChanges.categories?.[cat.id] || {})
-      }));
-    return [...base, ...stagedAdditions.categories];
-  }, [categories, pendingChanges.categories, stagedAdditions.categories, stagedDeletions.categories]);
+    return categories.map(cat => ({
+      ...cat,
+      ...(pendingChanges.categories?.[cat.id] || {})
+    }));
+  }, [categories, pendingChanges.categories]);
 
   const displayMatches = useMemo(() => {
-    const base = matches
-      .filter(m => !stagedDeletions.matches.includes(m.id))
-      .map(m => ({
-        ...m,
-        ...(pendingChanges.matches?.[m.id] || {})
-      }));
-    return [...base, ...stagedAdditions.matches];
-  }, [matches, pendingChanges.matches, stagedAdditions.matches, stagedDeletions.matches]);
+    return matches.map(m => ({
+      ...m,
+      ...(pendingChanges.matches?.[m.id] || {})
+    }));
+  }, [matches, pendingChanges.matches]);
 
   const displaySchedule = useMemo(() => {
-    const base = schedule
-      .filter(s => !stagedDeletions.schedule.includes(s.id))
-      .map(s => ({
-        ...s,
-        ...(pendingChanges.schedule?.[s.id] || {})
-      }));
-    return [...base, ...stagedAdditions.schedule];
-  }, [schedule, pendingChanges.schedule, stagedAdditions.schedule, stagedDeletions.schedule]);
+    return schedule.map(s => ({
+      ...s,
+      ...(pendingChanges.schedule?.[s.id] || {})
+    }));
+  }, [schedule, pendingChanges.schedule]);
 
   const displayNotices = useMemo(() => {
-    const base = notices
-      .filter(n => !stagedDeletions.notices.includes(n.id))
-      .map(n => ({
-        ...n,
-        ...(pendingChanges.notices?.[n.id] || {})
-      }));
-    return [...base, ...stagedAdditions.notices];
-  }, [notices, pendingChanges.notices, stagedAdditions.notices, stagedDeletions.notices]);
+    return notices.map(n => ({
+      ...n,
+      ...(pendingChanges.notices?.[n.id] || {})
+    }));
+  }, [notices, pendingChanges.notices]);
 
   const displayGallery = useMemo(() => {
-    const base = gallery
-      .filter(g => !stagedDeletions.gallery.includes(g.id))
-      .map(item => ({
-        ...item,
-        ...(pendingChanges.gallery?.[item.id] || {})
-      }));
-    return [...base, ...stagedAdditions.gallery];
-  }, [gallery, pendingChanges.gallery, stagedAdditions.gallery, stagedDeletions.gallery]);
+    return gallery.map(item => ({
+      ...item,
+      ...(pendingChanges.gallery?.[item.id] || {})
+    }));
+  }, [gallery, pendingChanges.gallery]);
 
   const displayCulturalResults = useMemo(() => {
-    const base = culturalResults
-      .filter(r => !stagedDeletions.cultural_results.includes(r.id))
-      .map(r => ({
-        ...r,
-        ...(pendingChanges.cultural_results?.[r.id] || {})
-      }));
-    const all = [...base, ...stagedAdditions.cultural_results];
-
-    // Group by category and grade to calculate ranks from points
-    const grouped: Record<string, Record<string, any[]>> = {};
-    all.forEach(r => {
-      if (!grouped[r.category_id]) grouped[r.category_id] = {};
-      const grade = r.eligible_years || 'General';
-      if (!grouped[r.category_id][grade]) grouped[r.category_id][grade] = [];
-      grouped[r.category_id][grade].push(r);
-    });
-
-    // Assign ranks based on points within each group
-    Object.values(grouped).forEach(categoryGrades => {
-      Object.values(categoryGrades).forEach(gradeResults => {
-        gradeResults.sort((a, b) => (b.points || 0) - (a.points || 0));
-        gradeResults.forEach((r, idx) => {
-          r.rank = idx + 1;
-        });
-      });
-    });
-
-    return all;
-  }, [culturalResults, pendingChanges.cultural_results, stagedAdditions.cultural_results, stagedDeletions.cultural_results]);
+    return culturalResults.map(r => ({
+      ...r,
+      ...(pendingChanges.cultural_results?.[r.id] || {})
+    }));
+  }, [culturalResults, pendingChanges.cultural_results]);
   // Nested CategoryCard removed
 
   const [activeTab, setActiveTab] = useState<AdminTab>('results');
-  const [scheduleSubTab, setScheduleSubTab] = useState<'sport' | 'cultural' | 'selected'>('sport');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [localSettings, setLocalSettings] = useState<Record<string, string>>({});
   const [hasChanges, setHasChanges] = useState(false);
   const [selectedResultCategory, setSelectedResultCategory] = useState<string | null>(null);
+  const [selectedVenue, setSelectedVenue] = useState<string>('all');
+  const [matchVenueFilter, setMatchVenueFilter] = useState<string>('all');
+  const [scheduleVenueFilter, setScheduleVenueFilter] = useState<string>('all');
+
+  const allVenues = useMemo(() => {
+    const venues = new Set<string>();
+    schedule.forEach(s => { if (s.venue) venues.add(s.venue); });
+    matches.forEach(m => { if (m.venue) venues.add(m.venue); });
+    return Array.from(venues).sort();
+  }, [schedule, matches]);
+
+  const categoriesByVenue = useMemo(() => {
+    const map: Record<string, Set<string>> = { 'all': new Set(categories.map(c => c.id)) };
+    
+    allVenues.forEach(v => map[v] = new Set());
+
+    schedule.forEach(s => {
+      if (s.venue && s.category) {
+        const cat = categories.find(c => c.name === s.category);
+        if (cat) map[s.venue].add(cat.id);
+      }
+    });
+
+    matches.forEach(m => {
+      if (m.venue && m.category_id) {
+        map[m.venue].add(m.category_id);
+      }
+    });
+
+    return map;
+  }, [categories, allVenues, schedule, matches]);
 
   // Load pending changes from localStorage on mount
   React.useEffect(() => {
@@ -417,11 +463,8 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
   }, [pendingChanges]);
 
   const hasPendingChanges = useMemo(() => {
-    const hasUpdates = Object.values(pendingChanges).some(table => Object.keys(table).length > 0);
-    const hasAdditions = Object.values(stagedAdditions).some(arr => arr.length > 0);
-    const hasDeletions = Object.values(stagedDeletions).some(arr => arr.length > 0);
-    return hasUpdates || hasAdditions || hasDeletions || hasChanges;
-  }, [pendingChanges, stagedAdditions, stagedDeletions, hasChanges]);
+    return Object.values(pendingChanges).some(table => Object.keys(table).length > 0) || hasChanges;
+  }, [pendingChanges, hasChanges]);
 
   const stageChange = (table: string, id: string | number, updates: any) => {
     setPendingChanges(prev => ({
@@ -462,32 +505,10 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
               if (error) throw error;
             }
 
-            // 2. Deletions
-            for (const [table, ids] of Object.entries(stagedDeletions)) {
-              if (ids.length > 0) {
-                const { error } = await supabase.from(table).delete().in('id', ids);
-                if (error) throw error;
-              }
-            }
-
-            // 3. Additions
-            for (const [table, items] of Object.entries(stagedAdditions)) {
-              if (items.length > 0) {
-                // Remove temporary IDs before inserting
-                const itemsToInsert = items.map(({ id, ...rest }) => rest);
-                const { error } = await supabase.from(table).insert(itemsToInsert);
-                if (error) throw error;
-              }
-            }
-
-            // 4. Updates
+            // 2. Other tables
             for (const [table, changes] of Object.entries(pendingChanges)) {
-              if (table === 'settings' || table === 'houses') continue;
+              if (table === 'settings') continue;
               for (const [id, updates] of Object.entries(changes)) {
-                // Skip if this record was just added (it's already in stagedAdditions with latest values)
-                if (typeof id === 'number' && id > 1000000000000) continue;
-                if (typeof id === 'string' && id.startsWith('new_')) continue;
-
                 const { error } = await supabase.from(table).update(updates).eq('id', id);
                 if (error) throw error;
               }
@@ -510,7 +531,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
               });
             }
 
-            // Handle other tables (updates)
+            // Handle other tables
             for (const [table, changes] of Object.entries(pendingChanges)) {
               if (table === 'settings') continue;
               for (const [id, updates] of Object.entries(changes)) {
@@ -523,10 +544,6 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                 });
               }
             }
-
-            // Handle additions and deletions (simplified for now)
-            // In a real app, staged_changes would need an 'action' column (INSERT, UPDATE, DELETE)
-            // For now, we'll just log them or skip if not supported by schema
 
             if (stagedEntries.length > 0) {
               const { error } = await supabase.from('staged_changes').insert(stagedEntries);
@@ -542,24 +559,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
             notices: {},
             cultural_results: {},
             houses: {},
-            gallery: {},
             settings: {}
-          });
-          setStagedAdditions({
-            categories: [],
-            matches: [],
-            schedule: [],
-            notices: [],
-            cultural_results: [],
-            gallery: []
-          });
-          setStagedDeletions({
-            categories: [],
-            matches: [],
-            schedule: [],
-            notices: [],
-            cultural_results: [],
-            gallery: []
           });
           localStorage.removeItem('ucsf_pending_changes');
           setHasChanges(false);
@@ -637,22 +637,6 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
           cultural_results: {},
           houses: {},
           settings: {}
-        });
-        setStagedAdditions({
-          categories: [],
-          matches: [],
-          schedule: [],
-          notices: [],
-          cultural_results: [],
-          gallery: []
-        });
-        setStagedDeletions({
-          categories: [],
-          matches: [],
-          schedule: [],
-          notices: [],
-          cultural_results: [],
-          gallery: []
         });
         localStorage.removeItem('ucsf_pending_changes');
         setLocalSettings(settings);
@@ -739,134 +723,129 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
     return true;
   };
 
-  const updateMatch = (id: number, updates: Partial<Match>) => {
-    if (id > 1000000000000) {
-      setStagedAdditions(prev => ({
-        ...prev,
-        matches: prev.matches.map(m => m.id === id ? { ...m, ...updates } : m)
-      }));
-    } else {
-      stageChange('matches', id, updates);
-    }
+  const updateMatch = async (matchId: number, updates: Partial<Match>) => {
+    stageChange('matches', matchId, updates);
   };
 
-  const addMatch = (categoryId?: string) => {
-    const newId = Date.now();
-    const newMatch: any = {
-      id: newId,
-      category_id: categoryId || selectedResultCategory || categories[0]?.id,
-      match_no: displayMatches.filter(m => m.category_id === (categoryId || selectedResultCategory || categories[0]?.id)).length + 1,
+  const addMatch = async (categoryId?: string) => {
+    if (!supabase || !(await checkSession())) return;
+    setLoading(true);
+    const { error } = await supabase.from('matches').insert([{
+      category_id: categoryId || categories[0]?.id,
+      match_no: matches.length + 1,
       team1_id: houses[0]?.id,
       team2_id: houses[1]?.id,
-      score1: 0,
-      score2: 0,
       status: 'upcoming',
-      eligible_years: '7-8th'
-    };
-    setStagedAdditions(prev => ({
-      ...prev,
-      matches: [...prev.matches, newMatch]
-    }));
-  };
-
-  const deleteMatch = (id: number) => {
-    if (id > 1000000000000) {
-      setStagedAdditions(prev => ({
-        ...prev,
-        matches: prev.matches.filter(m => m.id !== id)
-      }));
-    } else {
-      setStagedDeletions(prev => ({
-        ...prev,
-        matches: [...prev.matches, id]
-      }));
+      score1: 0,
+      score2: 0
+    }]);
+    if (error) handleSupabaseError(error, 'Failed to add match');
+    else {
+      refresh();
+      setLoading(false);
     }
   };
 
-  const updateSchedule = (id: number, updates: Partial<ScheduleItem>) => {
-    if (id > 1000000000000) {
-      setStagedAdditions(prev => ({
-        ...prev,
-        schedule: prev.schedule.map(s => s.id === id ? { ...s, ...updates } : s)
-      }));
-    } else {
-      stageChange('schedule', id, updates);
-    }
+  const deleteMatch = async (id: number) => {
+    if (!supabase || !(await checkSession())) return;
+    
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Match',
+      message: 'Are you sure you want to delete this match? This action cannot be undone.',
+      onConfirm: async () => {
+        setLoading(true);
+        const { error } = await supabase.from('matches').delete().eq('id', id);
+        if (error) handleSupabaseError(error, 'Failed to delete match');
+        else {
+          refresh();
+          setLoading(false);
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    });
   };
 
-  const addSchedule = (day?: string) => {
-    const newId = Date.now();
-    const newItem: any = {
-      id: newId,
-      day_label: day || 'Day 1',
+  const updateSchedule = async (itemId: number, updates: Partial<ScheduleItem>) => {
+    stageChange('schedule', itemId, updates);
+  };
+
+  const addSchedule = async () => {
+    if (!supabase || !(await checkSession())) return;
+    setLoading(true);
+    const { error } = await supabase.from('schedule').insert([{
+      day_label: 'Day 1',
       day_date: 'April 10, 2026',
       time_start: '09:00 AM',
       title: 'New Event',
-      type: scheduleSubTab,
       status: 'upcoming',
-      sort_order: displaySchedule.length + 1
-    };
-    setStagedAdditions(prev => ({
-      ...prev,
-      schedule: [...prev.schedule, newItem]
-    }));
-  };
-
-  const deleteSchedule = (id: number) => {
-    if (id > 1000000000000) {
-      setStagedAdditions(prev => ({
-        ...prev,
-        schedule: prev.schedule.filter(s => s.id !== id)
-      }));
-    } else {
-      setStagedDeletions(prev => ({
-        ...prev,
-        schedule: [...prev.schedule, id]
-      }));
+      sort_order: schedule.length + 1
+    }]);
+    if (error) handleSupabaseError(error, 'Failed to add schedule item');
+    else {
+      refresh();
+      setLoading(false);
     }
   };
 
-  const updateCategory = (id: string, updates: Partial<Category>) => {
-    if (id.startsWith('new_cat_')) {
-      setStagedAdditions(prev => ({
-        ...prev,
-        categories: prev.categories.map(c => c.id === id ? { ...c, ...updates } : c)
-      }));
-    } else {
-      stageChange('categories', id, updates);
-    }
+  const deleteSchedule = async (id: number) => {
+    if (!supabase || !(await checkSession())) return;
+    
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Event',
+      message: 'Are you sure you want to delete this event? This action cannot be undone.',
+      onConfirm: async () => {
+        setLoading(true);
+        const { error } = await supabase.from('schedule').delete().eq('id', id);
+        if (error) handleSupabaseError(error, 'Failed to delete schedule item');
+        else {
+          refresh();
+          setLoading(false);
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    });
   };
 
-  const addCategory = () => {
-    const newId = `new_cat_${Date.now()}`;
-    const newCat: Category = {
-      id: newId,
-      name: 'New Category',
-      icon: '🏆',
-      sort_order: displayCategories.length + 1,
-      gender: 'Mixed',
-      eligible_years: '7-12th',
+  const updateCategory = async (catId: string, updates: Partial<Category>) => {
+    stageChange('categories', catId, updates);
+  };
+
+  const addCategory = async () => {
+    if (!supabase || !(await checkSession())) return;
+    setLoading(true);
+    const { error } = await supabase.from('categories').insert([{
+      name: 'New Sport',
+      icon: '',
       category_type: 'sport',
-      is_active: true
-    };
-    setStagedAdditions(prev => ({
-      ...prev,
-      categories: [...prev.categories, newCat]
-    }));
+      sort_order: categories.length + 1
+    }]);
+    if (error) handleSupabaseError(error, 'Failed to add category');
+    else {
+      refresh();
+      setLoading(false);
+    }
   };
 
-  const deleteCategory = (id: string) => {
-    if (id.startsWith('new_cat_')) {
-      setStagedAdditions(prev => ({
-        ...prev,
-        categories: prev.categories.filter(c => c.id !== id)
-      }));
-    } else {
-      setStagedDeletions(prev => ({
-        ...prev,
-        categories: [...prev.categories, id]
-      }));
-    }
+  const deleteCategory = async (id: string) => {
+    if (!supabase || !(await checkSession())) return;
+    
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Category',
+      message: 'Are you sure you want to delete this category? This might affect matches linked to it.',
+      onConfirm: async () => {
+        setLoading(true);
+        const { error } = await supabase.from('categories').delete().eq('id', id);
+        if (error) handleSupabaseError(error, 'Failed to delete category');
+        else {
+          refresh();
+          setLoading(false);
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    });
   };
 
   const updateSetting = async (key: string, val: string) => {
@@ -882,48 +861,56 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
     }
   };
 
-  const updateNotice = (id: number, updates: Partial<Notice>) => {
-    if (id > 1000000000000) {
-      setStagedAdditions(prev => ({
-        ...prev,
-        notices: prev.notices.map(n => n.id === id ? { ...n, ...updates } : n)
-      }));
-    } else {
-      stageChange('notices', id, updates);
-    }
+  const updateNotice = async (id: number, updates: Partial<Notice>) => {
+    stageChange('notices', id, updates);
   };
 
-  const handleNoticeSubmit = () => {
+  const handleNoticeSubmit = async () => {
+    if (!supabase || !(await checkSession())) return;
+    
     if (noticeModal?.notice) {
-      updateNotice(noticeModal.notice.id, noticeFormData);
+      // It's an update, stage it
+      stageChange('notices', noticeModal.notice.id, noticeFormData);
+      setNoticeModal(null);
+      setNoticeFormData({ title: '', content: '', priority: 'low' });
     } else {
-      const newId = Date.now();
-      const newNotice: any = {
-        id: newId,
-        ...noticeFormData,
-        created_at: new Date().toISOString()
-      };
-      setStagedAdditions(prev => ({
-        ...prev,
-        notices: [...prev.notices, newNotice]
-      }));
+      // It's a new notice, we'll insert it immediately as it's hard to stage without ID
+      setLoading(true);
+      try {
+        const { error } = await supabase.from('notices').insert([noticeFormData]);
+        if (error) throw error;
+        setNoticeModal(null);
+        setNoticeFormData({ title: '', content: '', priority: 'low' });
+        refresh();
+      } catch (err: any) {
+        handleSupabaseError(err, 'Failed to save notice');
+      } finally {
+        setLoading(false);
+      }
     }
-    setNoticeModal(null);
-    setNoticeFormData({ title: '', content: '', priority: 'low' });
   };
 
-  const deleteNotice = (id: number) => {
-    if (id > 1000000000000) {
-      setStagedAdditions(prev => ({
-        ...prev,
-        notices: prev.notices.filter(n => n.id !== id)
-      }));
-    } else {
-      setStagedDeletions(prev => ({
-        ...prev,
-        notices: [...prev.notices, id]
-      }));
-    }
+  const deleteNotice = async (id: number) => {
+    if (!supabase || !(await checkSession())) return;
+    
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Notice',
+      message: 'Are you sure you want to permanently delete this notice?',
+      onConfirm: async () => {
+        setLoading(true);
+        try {
+          const { error } = await supabase.from('notices').delete().eq('id', id);
+          if (error) throw error;
+          refresh();
+        } catch (err: any) {
+          handleSupabaseError(err, 'Failed to delete notice');
+        } finally {
+          setLoading(false);
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    });
   };
 
   const getEmbedUrl = (url: string) => {
@@ -1077,45 +1064,43 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
     }
   };
 
-  const updateCulturalResult = (id: number, updates: any) => {
-    if (id > 1000000000000) {
-      setStagedAdditions(prev => ({
-        ...prev,
-        cultural_results: prev.cultural_results.map(r => r.id === id ? { ...r, ...updates } : r)
-      }));
-    } else {
-      stageChange('cultural_results', id, updates);
-    }
+  const updateCulturalResult = async (id: number, updates: any) => {
+    stageChange('cultural_results', id, updates);
   };
 
-  const addCulturalResult = (catId: string) => {
-    const newId = Date.now();
-    const newResult: any = {
-      id: newId,
+  const addCulturalResult = async (catId: string) => {
+    if (!supabase || !(await checkSession())) return;
+    setLoading(true);
+    const { error } = await supabase.from('cultural_results').insert([{
       category_id: catId,
       house_id: houses[0]?.id,
       rank: 1,
-      points: 0,
-      eligible_years: '7-8th'
-    };
-    setStagedAdditions(prev => ({
-      ...prev,
-      cultural_results: [...prev.cultural_results, newResult]
-    }));
+      points: 0
+    }]);
+    if (error) handleSupabaseError(error, 'Failed to add cultural result');
+    else {
+      refresh();
+      setLoading(false);
+    }
   };
 
-  const deleteCulturalResult = (id: number) => {
-    if (id > 1000000000000) {
-      setStagedAdditions(prev => ({
-        ...prev,
-        cultural_results: prev.cultural_results.filter(r => r.id !== id)
-      }));
-    } else {
-      setStagedDeletions(prev => ({
-        ...prev,
-        cultural_results: [...prev.cultural_results, id]
-      }));
-    }
+  const deleteCulturalResult = async (id: number) => {
+    if (!supabase || !(await checkSession())) return;
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Result',
+      message: 'Are you sure you want to delete this cultural result?',
+      onConfirm: async () => {
+        setLoading(true);
+        const { error } = await supabase.from('cultural_results').delete().eq('id', id);
+        if (error) handleSupabaseError(error, 'Failed to delete result');
+        else {
+          refresh();
+          setLoading(false);
+          setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        }
+      }
+    });
   };
 
   React.useEffect(() => {
@@ -1297,8 +1282,17 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
             ))}
           </nav>
 
-        <div className="p-6 border-t border-white/5 space-y-6">
-          {hasPendingChanges && (
+          <div className="p-6 border-t border-white/5 space-y-4">
+            {onBack && (
+              <button 
+                onClick={onBack}
+                className="w-full py-4 bg-white/5 hover:bg-white/10 text-white font-ui text-[10px] font-bold uppercase tracking-widest transition-all rounded-xl flex items-center justify-center gap-2 border border-white/5"
+              >
+                <ExternalLink size={14} />
+                Back to Site
+              </button>
+            )}
+            {hasPendingChanges && (
             <motion.div 
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1461,50 +1455,57 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                       <p className="text-muted mt-2 font-sans text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.3em]">Enter scores and rankings for real-time feedback</p>
                     </div>
                     
-                    <div className="flex flex-col gap-6 bg-white/5 p-6 sm:p-8 border border-white/5 rounded-[2rem]">
-                      <div className="flex items-center gap-4 px-2">
-                        <Layers size={20} className="text-maple" />
-                        <h3 className="text-xl font-display uppercase tracking-widest text-white">Select Event</h3>
+                    <div className="flex flex-col gap-4 w-full lg:w-auto">
+                      {/* Venue Selector */}
+                      <div className="flex items-center flex-nowrap gap-2 bg-white/5 p-1 border border-white/5 rounded-xl sm:rounded-2xl overflow-x-auto no-scrollbar max-w-full w-full pb-2">
+                        <button
+                          onClick={() => {
+                            setSelectedVenue('all');
+                            setSelectedResultCategory(null);
+                          }}
+                          className={cn(
+                            "px-4 sm:px-6 py-2 sm:py-3 font-ui text-[8px] sm:text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg sm:rounded-xl whitespace-nowrap shrink-0",
+                            selectedVenue === 'all' ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
+                          )}
+                        >
+                          All Venues
+                        </button>
+                        {allVenues.map(venue => (
+                          <button
+                            key={venue}
+                            onClick={() => {
+                              setSelectedVenue(venue);
+                              setSelectedResultCategory(null);
+                            }}
+                            className={cn(
+                              "px-4 sm:px-6 py-2 sm:py-3 font-ui text-[8px] sm:text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg sm:rounded-xl whitespace-nowrap shrink-0",
+                              selectedVenue === venue ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
+                            )}
+                          >
+                            {venue}
+                          </button>
+                        ))}
                       </div>
-                      
-                      <div className="space-y-6">
-                        {/* Sports Group */}
-                        <div className="space-y-3">
-                          <p className="font-ui text-[9px] font-bold text-muted uppercase tracking-[0.3em] ml-2">Sports Events</p>
-                          <div className="flex items-center flex-nowrap gap-2 overflow-x-auto no-scrollbar pb-2">
-                            {displayCategories.filter(c => c.category_type === 'sport' || !c.category_type).map(cat => (
-                              <button
-                                key={cat.id}
-                                onClick={() => setSelectedResultCategory(cat.id)}
-                                className={cn(
-                                  "px-4 sm:px-6 py-2 sm:py-3 font-ui text-[8px] sm:text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg sm:rounded-xl whitespace-nowrap shrink-0",
-                                  selectedResultCategory === cat.id ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text bg-white/5"
-                                )}
-                              >
-                                {cat.name}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
 
-                        {/* Cultural Group */}
-                        <div className="space-y-3">
-                          <p className="font-ui text-[9px] font-bold text-muted uppercase tracking-[0.3em] ml-2">Cultural Events</p>
-                          <div className="flex items-center flex-nowrap gap-2 overflow-x-auto no-scrollbar pb-2">
-                            {displayCategories.filter(c => c.category_type === 'cultural').map(cat => (
-                              <button
-                                key={cat.id}
-                                onClick={() => setSelectedResultCategory(cat.id)}
-                                className={cn(
-                                  "px-4 sm:px-6 py-2 sm:py-3 font-ui text-[8px] sm:text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg sm:rounded-xl whitespace-nowrap shrink-0",
-                                  selectedResultCategory === cat.id ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text bg-white/5"
-                                )}
-                              >
-                                {cat.name}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
+                      {/* Category Selector */}
+                      <div className="flex items-center flex-nowrap gap-2 bg-white/5 p-1 border border-white/5 rounded-xl sm:rounded-2xl overflow-x-auto no-scrollbar max-w-full w-full pb-2">
+                        {displayCategories
+                          .filter(cat => categoriesByVenue[selectedVenue].has(cat.id))
+                          .map(cat => (
+                          <button
+                            key={cat.id}
+                            onClick={() => setSelectedResultCategory(cat.id)}
+                            className={cn(
+                              "px-4 sm:px-6 py-2 sm:py-3 font-ui text-[8px] sm:text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg sm:rounded-xl whitespace-nowrap shrink-0",
+                              selectedResultCategory === cat.id ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
+                            )}
+                          >
+                            {cat.name}
+                          </button>
+                        ))}
+                        {displayCategories.filter(cat => categoriesByVenue[selectedVenue].has(cat.id)).length === 0 && (
+                          <p className="px-6 py-2 text-[10px] font-bold text-muted uppercase tracking-widest">No events at this venue</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1513,7 +1514,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                     <div className="space-y-12">
                       {/* Sports Matches Section (if applicable) */}
                       {displayCategories.find(c => c.id === selectedResultCategory)?.category_type === 'sport' && (
-                        <div className="space-y-12">
+                        <div className="space-y-8">
                           <div className="flex items-center justify-between px-4">
                             <div className="flex items-center gap-4">
                               <Activity size={20} className="text-maple" />
@@ -1526,178 +1527,68 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                               <Plus size={14} /> Add Match
                             </button>
                           </div>
-                          
-                          <div className="space-y-12">
-                            {(() => {
-                              const catMatches = displayMatches.filter(m => m.category_id === selectedResultCategory);
-                              const matchesByGrade: Record<string, Match[]> = {};
-                              catMatches.forEach(m => {
-                                const grade = m.eligible_years || 'Grade Not Set';
-                                if (!matchesByGrade[grade]) matchesByGrade[grade] = [];
-                                matchesByGrade[grade].push(m);
-                              });
-
-                              if (catMatches.length === 0) {
-                                return (
-                                  <div className="py-12 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
-                                    <p className="text-muted font-ui text-[10px] font-bold uppercase tracking-widest">No matches found for this category</p>
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            {displayMatches.filter(m => m.category_id === selectedResultCategory).map(match => (
+                              <div key={match.id} className="bg-bg2 border border-white/5 rounded-[1.5rem] sm:rounded-[2rem] p-6 sm:p-8 space-y-6 relative group">
+                                <button 
+                                  onClick={() => deleteMatch(match.id)}
+                                  className="absolute top-4 right-4 w-8 h-8 bg-danger/5 hover:bg-danger text-danger hover:text-white rounded-lg transition-all border border-danger/10 flex items-center justify-center active:scale-90 opacity-0 group-hover:opacity-100 z-10"
+                                  title="Delete Match"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                                <div className="flex justify-between items-center border-b border-white/5 pb-4">
+                                  <span className="font-ui text-[9px] font-bold text-muted uppercase tracking-widest">Match #{match.match_no}</span>
+                                  <span className="font-ui text-[9px] font-bold text-maple uppercase tracking-widest">{match.eligible_years}</span>
+                                </div>
+                                
+                                <div className="grid grid-cols-1 sm:grid-cols-3 items-center gap-4">
+                                  <div className="text-center space-y-2">
+                                    <p className="font-display text-base sm:text-lg uppercase truncate">{houses.find(h => h.id === match.team1_id)?.name}</p>
+                                    <input 
+                                      type="number" 
+                                      value={match.score1}
+                                      onChange={(e) => updateMatch(match.id, { score1: parseInt(e.target.value) })}
+                                      className="w-full bg-white/5 border border-white/5 rounded-xl py-3 text-center text-2xl font-display text-white outline-none focus:border-maple/50"
+                                    />
                                   </div>
-                                );
-                              }
-
-                              return Object.entries(matchesByGrade).map(([grade, gradeMatches]) => (
-                                <div key={grade} className="space-y-6">
-                                  <div className="flex items-center gap-4 px-4">
-                                    <div className="w-2 h-2 rounded-full bg-maple shadow-[0_0_10px_rgba(188,138,44,0.5)]" />
-                                    <h4 className="text-lg font-display uppercase tracking-widest text-maple/90">{grade}</h4>
-                                    <span className="px-3 py-1 bg-white/5 border border-white/5 rounded-full text-[9px] font-bold text-muted uppercase tracking-widest">{gradeMatches.length} Matches</span>
-                                  </div>
-                                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                    {gradeMatches.map(match => (
-                                      <div key={match.id} className="bg-bg2 border border-white/5 rounded-[1.5rem] sm:rounded-[2rem] p-6 sm:p-8 space-y-6 relative group">
-                                        <button 
-                                          onClick={() => deleteMatch(match.id)}
-                                          className="absolute top-4 right-4 w-8 h-8 bg-danger/5 hover:bg-danger text-danger hover:text-white rounded-lg transition-all border border-danger/10 flex items-center justify-center active:scale-90 opacity-0 group-hover:opacity-100 z-10"
-                                          title="Delete Match"
-                                        >
-                                          <Trash2 size={14} />
-                                        </button>
-                                        <div className="flex justify-between items-center border-b border-white/5 pb-4">
-                                          <span className="font-ui text-[9px] font-bold text-muted uppercase tracking-widest">Match #{match.match_no}</span>
-                                          <span className="font-ui text-[9px] font-bold text-maple uppercase tracking-widest">{match.eligible_years}</span>
-                                        </div>
-                                        
-                                        <div className="grid grid-cols-1 sm:grid-cols-3 items-center gap-4">
-                                          <div className="text-center space-y-2">
-                                            <p className="font-display text-base sm:text-lg uppercase truncate">{houses.find(h => h.id === match.team1_id)?.name}</p>
-                                            <input 
-                                              type="number" 
-                                              value={match.score1}
-                                              onChange={(e) => updateMatch(match.id, { score1: parseInt(e.target.value) })}
-                                              className="w-full bg-white/5 border border-white/5 rounded-xl py-3 text-center text-2xl font-display text-white outline-none focus:border-maple/50"
-                                            />
-                                          </div>
-                                          <div className="text-center text-muted font-display text-xl sm:text-2xl py-2 sm:py-0">VS</div>
-                                          <div className="text-center space-y-2">
-                                            <p className="font-display text-base sm:text-lg uppercase truncate">{houses.find(h => h.id === match.team2_id)?.name}</p>
-                                            <input 
-                                              type="number" 
-                                              value={match.score2}
-                                              onChange={(e) => updateMatch(match.id, { score2: parseInt(e.target.value) })}
-                                              className="w-full bg-white/5 border border-white/5 rounded-xl py-3 text-center text-2xl font-display text-white outline-none focus:border-maple/50"
-                                            />
-                                          </div>
-                                        </div>
-
-                                        <div className="pt-4 space-y-4">
-                                          <label className="font-ui text-[9px] font-bold text-muted uppercase tracking-widest block">Winner</label>
-                                          <select
-                                            value={match.winner_id || ''}
-                                            onChange={(e) => updateMatch(match.id, { winner_id: e.target.value || null, status: 'completed' })}
-                                            className="w-full bg-white/5 border border-white/5 rounded-xl py-3 px-4 text-[10px] font-bold uppercase tracking-widest text-maple outline-none"
-                                          >
-                                            <option value="" className="bg-bg-dark">Select Winner</option>
-                                            <option value={match.team1_id} className="bg-bg-dark">{houses.find(h => h.id === match.team1_id)?.name}</option>
-                                            <option value={match.team2_id} className="bg-bg-dark">{houses.find(h => h.id === match.team2_id)?.name}</option>
-                                            <option value="draw" className="bg-bg-dark">Draw</option>
-                                          </select>
-                                        </div>
-                                      </div>
-                                    ))}
+                                  <div className="text-center text-muted font-display text-xl sm:text-2xl py-2 sm:py-0">VS</div>
+                                  <div className="text-center space-y-2">
+                                    <p className="font-display text-base sm:text-lg uppercase truncate">{houses.find(h => h.id === match.team2_id)?.name}</p>
+                                    <input 
+                                      type="number" 
+                                      value={match.score2}
+                                      onChange={(e) => updateMatch(match.id, { score2: parseInt(e.target.value) })}
+                                      className="w-full bg-white/5 border border-white/5 rounded-xl py-3 text-center text-2xl font-display text-white outline-none focus:border-maple/50"
+                                    />
                                   </div>
                                 </div>
-                              ));
-                            })()}
+
+                                <div className="pt-4 space-y-4">
+                                  <label className="font-ui text-[9px] font-bold text-muted uppercase tracking-widest block">Winner</label>
+                                  <select
+                                    value={match.winner_id || ''}
+                                    onChange={(e) => updateMatch(match.id, { winner_id: e.target.value || null, status: 'completed' })}
+                                    className="w-full bg-white/5 border border-white/5 rounded-xl py-3 px-4 text-[10px] font-bold uppercase tracking-widest text-maple outline-none"
+                                  >
+                                    <option value="" className="bg-bg-dark">Select Winner</option>
+                                    <option value={match.team1_id} className="bg-bg-dark">{houses.find(h => h.id === match.team1_id)?.name}</option>
+                                    <option value={match.team2_id} className="bg-bg-dark">{houses.find(h => h.id === match.team2_id)?.name}</option>
+                                    <option value="draw" className="bg-bg-dark">Draw</option>
+                                  </select>
+                                </div>
+                              </div>
+                            ))}
+                            {displayMatches.filter(m => m.category_id === selectedResultCategory).length === 0 && (
+                              <div className="col-span-full py-12 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
+                                <p className="text-muted font-ui text-[10px] font-bold uppercase tracking-widest">No matches found for this category</p>
+                              </div>
+                            )}
                           </div>
                         </div>
                       )}
 
-                      {/* Manual Point Entry Section (Dynasty Rankings) */}
-                      <div className="bg-bg2 border border-white/5 rounded-[2rem] sm:rounded-[3rem] p-6 sm:p-10 space-y-8">
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                          <div className="flex items-center gap-4">
-                            <Trophy size={24} className="text-maple" />
-                            <h3 className="text-2xl sm:text-3xl font-display uppercase tracking-tighter text-white">Final Dynasty Points</h3>
-                          </div>
-                          <button 
-                            onClick={() => addCulturalResult(selectedResultCategory)}
-                            className="w-full sm:w-auto bg-maple hover:bg-maple/90 text-bg py-3 px-6 rounded-xl font-ui text-[9px] font-bold uppercase tracking-[0.2em] transition-all shadow-xl shadow-maple/20 flex items-center justify-center gap-2 active:scale-95"
-                          >
-                            <Plus size={14} /> Add Dynasty Entry
-                          </button>
-                        </div>
-                        
-                        <div className="space-y-12">
-                          {(() => {
-                            const resultsByGrade: Record<string, CulturalResult[]> = {};
-                            displayCulturalResults.filter(r => r.category_id === selectedResultCategory).forEach(r => {
-                              const grade = r.eligible_years || 'General';
-                              if (!resultsByGrade[grade]) resultsByGrade[grade] = [];
-                              resultsByGrade[grade].push(r);
-                            });
-
-                            const grades = Object.keys(resultsByGrade).sort();
-
-                            return grades.map((grade) => (
-                              <div key={grade} className="space-y-6">
-                                <div className="flex items-center gap-4 px-2">
-                                  <div className="w-2 h-2 rounded-full bg-maple" />
-                                  <h4 className="text-lg font-display uppercase tracking-widest text-maple/90">{grade}</h4>
-                                </div>
-                                <div className="grid grid-cols-1 gap-4">
-                                  {resultsByGrade[grade].sort((a, b) => (b.points || 0) - (a.points || 0)).map((result) => (
-                                    <div key={result.id} className="flex flex-col lg:flex-row items-center gap-4 sm:gap-6 bg-white/5 p-4 sm:p-6 rounded-2xl border border-white/5 group/res">
-                                      <div className="flex items-center gap-4 w-full lg:w-auto">
-                                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/5 rounded-xl flex items-center justify-center font-display text-xl sm:text-2xl text-maple shrink-0">
-                                          {result.rank}
-                                        </div>
-                                        <div className="flex-1">
-                                          <select
-                                            value={result.house_id}
-                                            onChange={(e) => updateCulturalResult(result.id, { house_id: e.target.value })}
-                                            className="w-full bg-transparent border-none text-[10px] sm:text-xs font-bold uppercase tracking-widest text-white outline-none truncate"
-                                          >
-                                            {houses.map(h => <option key={h.id} value={h.id} className="bg-bg-dark">{h.name}</option>)}
-                                          </select>
-                                          <input 
-                                            type="text"
-                                            value={result.eligible_years || ''}
-                                            placeholder="Grade"
-                                            className="w-full bg-transparent border-none text-[8px] text-muted outline-none"
-                                            onChange={(e) => updateCulturalResult(result.id, { eligible_years: e.target.value })}
-                                          />
-                                        </div>
-                                      </div>
-                                      <div className="flex items-center justify-between w-full lg:w-auto gap-4">
-                                        <div className="flex items-center gap-3 bg-white/5 px-4 py-2 rounded-xl border border-white/5 flex-1 lg:flex-none">
-                                          <span className="text-[9px] sm:text-[10px] font-bold text-muted uppercase">Points</span>
-                                          <input
-                                            type="number"
-                                            value={result.points || ''}
-                                            className="w-full lg:w-16 bg-transparent border-none text-sm font-bold text-maple text-center outline-none"
-                                            onChange={(e) => updateCulturalResult(result.id, { points: parseInt(e.target.value) || 0 })}
-                                          />
-                                        </div>
-                                        <button 
-                                          onClick={() => deleteCulturalResult(result.id)}
-                                          className="p-3 sm:p-2 text-danger/50 hover:text-danger hover:bg-danger/10 rounded-lg transition-all shrink-0"
-                                        >
-                                          <Trash2 size={18} />
-                                        </button>
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-                            ));
-                          })()}
-                          {displayCulturalResults.filter(r => r.category_id === selectedResultCategory).length === 0 && (
-                            <div className="py-12 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
-                              <p className="text-muted font-ui text-[10px] font-bold uppercase tracking-widest">No manual points assigned yet</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                      {/* Manual Point Entry Section (Dynasty Rankings) moved to Categories tab */}
                     </div>
                   ) : (
                     <div className="py-40 text-center card-glass">
@@ -1728,37 +1619,63 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                         className="w-full bg-white/5 border border-white/5 focus:border-maple/50 focus:bg-white/10 rounded-xl sm:rounded-2xl py-4 sm:py-5 pl-14 sm:pl-16 pr-6 sm:pr-8 text-[12px] sm:text-sm outline-none transition-all placeholder:text-muted/50"
                       />
                     </div>
-                    <div className="w-full lg:w-auto flex items-center gap-4 max-w-full overflow-hidden">
+                    <div className="w-full lg:w-auto flex flex-col gap-4 max-w-full overflow-hidden">
                       <div className="flex items-center flex-nowrap gap-2 bg-white/5 p-1 border border-white/5 rounded-xl sm:rounded-2xl overflow-x-auto no-scrollbar max-w-full w-full pb-2">
                         <button
-                          onClick={() => setCategoryFilter('all')}
+                          onClick={() => setMatchVenueFilter('all')}
                           className={cn(
                             "px-4 sm:px-6 py-2 sm:py-3 font-ui text-[8px] sm:text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg sm:rounded-xl whitespace-nowrap shrink-0",
-                            categoryFilter === 'all' ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
+                            matchVenueFilter === 'all' ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
                           )}
                         >
-                          All Categories
+                          All Venues
                         </button>
-                        {displayCategories.map(cat => (
+                        {allVenues.map(venue => (
                           <button
-                            key={cat.id}
-                            onClick={() => setCategoryFilter(cat.id)}
+                            key={venue}
+                            onClick={() => setMatchVenueFilter(venue)}
                             className={cn(
                               "px-4 sm:px-6 py-2 sm:py-3 font-ui text-[8px] sm:text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg sm:rounded-xl whitespace-nowrap shrink-0",
-                              categoryFilter === cat.id ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
+                              matchVenueFilter === venue ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
                             )}
                           >
-                            {cat.name}
+                            {venue}
                           </button>
                         ))}
                       </div>
-                      <button 
-                        onClick={() => addMatch(categoryFilter !== 'all' ? categoryFilter : undefined)}
-                        className="bg-maple hover:bg-maple/90 text-bg py-4 px-6 rounded-xl font-ui text-[10px] font-bold uppercase tracking-[0.2em] transition-all shadow-xl shadow-maple/20 flex items-center gap-2 shrink-0 active:scale-95"
-                      >
-                        <Plus size={16} />
-                        Add Match
-                      </button>
+
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center flex-nowrap gap-2 bg-white/5 p-1 border border-white/5 rounded-xl sm:rounded-2xl overflow-x-auto no-scrollbar max-w-full w-full pb-2">
+                          <button
+                            onClick={() => setCategoryFilter('all')}
+                            className={cn(
+                              "px-4 sm:px-6 py-2 sm:py-3 font-ui text-[8px] sm:text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg sm:rounded-xl whitespace-nowrap shrink-0",
+                              categoryFilter === 'all' ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
+                            )}
+                          >
+                            All Categories
+                          </button>
+                          {displayCategories.map(cat => (
+                            <button
+                              key={cat.id}
+                              onClick={() => setCategoryFilter(cat.id)}
+                              className={cn(
+                                "px-4 sm:px-6 py-2 sm:py-3 font-ui text-[8px] sm:text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg sm:rounded-xl whitespace-nowrap shrink-0",
+                                categoryFilter === cat.id ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
+                              )}
+                            >
+                              {cat.name}
+                            </button>
+                          ))}
+                        </div>
+                        <button 
+                          onClick={() => addMatch(categoryFilter !== 'all' ? categoryFilter : undefined)}
+                          className="bg-maple hover:bg-maple/90 text-bg py-4 px-6 rounded-xl font-ui text-[10px] font-bold uppercase tracking-[0.2em] transition-all shadow-xl shadow-maple/20 flex items-center gap-2 shrink-0 active:scale-95"
+                        >
+                          <Plus size={16} />
+                          Add Match
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -1769,6 +1686,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                       
                       // Only show if category matches filter and search
                       const matchesFilter = categoryFilter === 'all' || categoryFilter === cat.id;
+                      const venueFilter = matchVenueFilter === 'all' || catMatches.some(m => m.venue === matchVenueFilter);
                       const matchesSearch = searchQuery === '' || 
                         cat.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                         catMatches.some(m => 
@@ -1777,11 +1695,13 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                           m.venue?.toLowerCase().includes(searchQuery.toLowerCase())
                         );
 
-                      if (!matchesFilter || !matchesSearch) return null;
+                      if (!matchesFilter || !venueFilter || !matchesSearch) return null;
 
                       // Group matches by grade
                       const matchesByGrade: Record<string, Match[]> = {};
-                      catMatches.forEach(m => {
+                      catMatches
+                        .filter(m => matchVenueFilter === 'all' || m.venue === matchVenueFilter)
+                        .forEach(m => {
                         const grade = m.eligible_years || 'Grade Not Set';
                         if (!matchesByGrade[grade]) matchesByGrade[grade] = [];
                         matchesByGrade[grade].push(m);
@@ -1996,41 +1916,50 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                   exit={{ opacity: 0, x: -20 }}
                   className="space-y-12 pb-20"
                 >
-                  <div className="flex flex-col lg:flex-row items-center justify-between bg-[#0d1b33] p-8 sm:p-10 rounded-[2.5rem] sm:rounded-[3rem] border border-white/5 shadow-2xl gap-8">
-                    <div className="text-center lg:text-left">
-                      <h2 className="text-3xl sm:text-4xl font-display uppercase tracking-tighter text-white">Event Schedule</h2>
-                      <p className="text-muted text-xs mt-2 font-ui uppercase tracking-[0.2em] opacity-60">Timeline of festival events</p>
+                  <div className="flex flex-col lg:flex-row items-center justify-between bg-[#0d1b33] p-10 rounded-[3rem] border border-white/5 shadow-2xl gap-8">
+                    <div>
+                      <h2 className="text-4xl font-display uppercase tracking-tighter text-white">Event Schedule</h2>
+                      <p className="text-muted text-sm mt-2 font-ui uppercase tracking-[0.2em] opacity-60">Timeline of sports and cultural events</p>
                     </div>
 
-                    <div className="flex flex-wrap items-center justify-center gap-3 bg-white/5 p-2 rounded-2xl border border-white/5">
-                      {(['sport', 'cultural', 'selected'] as const).map((tab) => (
+                    <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
+                      <div className="flex items-center flex-nowrap gap-2 bg-white/5 p-1 border border-white/5 rounded-xl sm:rounded-2xl overflow-x-auto no-scrollbar max-w-full w-full pb-2">
                         <button
-                          key={tab}
-                          onClick={() => setScheduleSubTab(tab)}
+                          onClick={() => setScheduleVenueFilter('all')}
                           className={cn(
-                            "px-6 py-3 rounded-xl font-ui text-[10px] font-bold uppercase tracking-widest transition-all",
-                            scheduleSubTab === tab 
-                              ? "bg-maple text-bg shadow-lg shadow-maple/20" 
-                              : "text-muted hover:text-white hover:bg-white/5"
+                            "px-4 sm:px-6 py-2 sm:py-3 font-ui text-[8px] sm:text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg sm:rounded-xl whitespace-nowrap shrink-0",
+                            scheduleVenueFilter === 'all' ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
                           )}
                         >
-                          {tab === 'sport' ? 'Sports' : tab === 'cultural' ? 'Cultural' : 'Selected'}
+                          All Venues
                         </button>
-                      ))}
-                    </div>
+                        {allVenues.map(venue => (
+                          <button
+                            key={venue}
+                            onClick={() => setScheduleVenueFilter(venue)}
+                            className={cn(
+                              "px-4 sm:px-6 py-2 sm:py-3 font-ui text-[8px] sm:text-[10px] font-bold uppercase tracking-widest transition-all rounded-lg sm:rounded-xl whitespace-nowrap shrink-0",
+                              scheduleVenueFilter === venue ? "bg-maple text-bg shadow-lg" : "text-muted hover:text-text"
+                            )}
+                          >
+                            {venue}
+                          </button>
+                        ))}
+                      </div>
 
-                    <button 
-                      onClick={() => addSchedule()}
-                      className="w-full lg:w-auto bg-maple hover:bg-maple/90 text-bg py-5 px-12 rounded-2xl font-ui text-[11px] font-bold uppercase tracking-[0.2em] transition-all shadow-xl shadow-maple/20 flex items-center justify-center gap-3 group active:scale-95"
-                    >
-                      <Plus size={20} className="group-hover:rotate-90 transition-transform" />
-                      Add Event
-                    </button>
+                      <button 
+                        onClick={addSchedule}
+                        className="w-full sm:w-auto bg-maple hover:bg-maple/90 text-bg py-5 px-12 rounded-2xl font-ui text-[11px] font-bold uppercase tracking-[0.2em] transition-all shadow-xl shadow-maple/20 flex items-center justify-center gap-3 group active:scale-95"
+                      >
+                        <Plus size={20} className="group-hover:rotate-90 transition-transform" />
+                        Add Event
+                      </button>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 xl:grid-cols-2 gap-10">
                     {displaySchedule
-                      .filter(item => item.type === scheduleSubTab || (!item.type && scheduleSubTab === 'sport'))
+                      .filter(item => scheduleVenueFilter === 'all' || item.venue === scheduleVenueFilter)
                       .map((item) => (
                       <motion.div 
                         key={item.id} 
@@ -2040,7 +1969,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                         <div className="flex justify-between items-start mb-10">
                           <div className="flex items-center gap-6">
                             <div className="w-16 h-16 bg-maple/10 rounded-[1.5rem] flex items-center justify-center text-maple border border-maple/20 shadow-inner">
-                              {item.type === 'selected' ? <Users size={28} /> : <Calendar size={28} />}
+                              <Calendar size={28} />
                             </div>
                             <div className="space-y-2">
                               <div className="flex items-center gap-3">
@@ -2075,23 +2004,12 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <select
-                              value={item.type || 'sport'}
-                              onChange={(e) => updateSchedule(item.id, { type: e.target.value as any })}
-                              className="bg-white/5 border border-white/5 rounded-lg px-2 py-1 text-[8px] font-bold uppercase tracking-widest text-muted outline-none"
-                            >
-                              <option value="sport">Sport</option>
-                              <option value="cultural">Cultural</option>
-                              <option value="selected">Selected</option>
-                            </select>
-                            <button 
-                              onClick={() => deleteSchedule(item.id)}
-                              className="w-10 h-10 bg-danger/5 hover:bg-danger text-danger hover:text-white rounded-xl transition-all border border-danger/10 flex items-center justify-center active:scale-90"
-                            >
-                              <Trash2 size={18} />
-                            </button>
-                          </div>
+                          <button 
+                            onClick={() => deleteSchedule(item.id)}
+                            className="w-12 h-12 bg-danger/5 hover:bg-danger text-danger hover:text-white rounded-2xl transition-all border border-danger/10 flex items-center justify-center active:scale-90 opacity-0 group-hover:opacity-100"
+                          >
+                            <Trash2 size={20} />
+                          </button>
                         </div>
 
                         <div className="space-y-6 flex-1">
@@ -2196,6 +2114,11 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                             deleteCategory={deleteCategory}
                             updateCategory={updateCategory}
                             handleSupabaseError={handleSupabaseError}
+                            culturalResults={displayCulturalResults}
+                            houses={houses}
+                            addCulturalResult={addCulturalResult}
+                            updateCulturalResult={updateCulturalResult}
+                            deleteCulturalResult={deleteCulturalResult}
                           />
                         </div>
                       ))}
@@ -2217,6 +2140,11 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                             deleteCategory={deleteCategory}
                             updateCategory={updateCategory}
                             handleSupabaseError={handleSupabaseError}
+                            culturalResults={displayCulturalResults}
+                            houses={houses}
+                            addCulturalResult={addCulturalResult}
+                            updateCulturalResult={updateCulturalResult}
+                            deleteCulturalResult={deleteCulturalResult}
                           />
                         </div>
                       ))}
@@ -2574,131 +2502,6 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                             placeholder="https://docs.google.com/spreadsheets/..."
                             onChange={(e) => handleSettingChange('spreadsheet_url', e.target.value)}
                           />
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                          <div className="space-y-2 sm:space-y-3">
-                            <label className="font-ui text-[9px] sm:text-[10px] font-bold text-muted uppercase tracking-[0.3em] ml-1">Sports Schedule URL</label>
-                            <div className="flex gap-2">
-                              <input
-                                type="text"
-                                value={localSettings['sports_schedule_url'] || ''}
-                                className="flex-1 bg-white/5 border border-white/5 rounded-xl sm:rounded-2xl px-5 sm:px-8 py-4 sm:py-5 text-[12px] sm:text-[13px] font-bold text-white outline-none focus:border-maple/50 transition-all shadow-inner"
-                                placeholder="URL or PDF..."
-                                onChange={(e) => handleSettingChange('sports_schedule_url', e.target.value)}
-                              />
-                              <button 
-                                onClick={() => document.getElementById('sports-pdf-upload')?.click()}
-                                className="bg-white/5 hover:bg-white/10 text-white p-4 rounded-2xl border border-white/5 transition-all active:scale-90"
-                                title="Upload PDF"
-                              >
-                                <Upload size={20} />
-                              </button>
-                              <input 
-                                type="file"
-                                id="sports-pdf-upload"
-                                className="hidden"
-                                accept="application/pdf"
-                                onChange={async (e) => {
-                                  const file = e.target.files?.[0];
-                                  if (!file || !supabase) return;
-                                  setLoading(true);
-                                  try {
-                                    const fileName = `sports_schedule_${Date.now()}.pdf`;
-                                    const { error: uploadError } = await supabase.storage.from('ucsf-media').upload(fileName, file);
-                                    if (uploadError) throw uploadError;
-                                    const { data: { publicUrl } } = supabase.storage.from('ucsf-media').getPublicUrl(fileName);
-                                    handleSettingChange('sports_schedule_url', publicUrl);
-                                  } catch (err: any) {
-                                    handleSupabaseError(err, 'PDF upload failed');
-                                  } finally {
-                                    setLoading(false);
-                                  }
-                                }}
-                              />
-                            </div>
-                          </div>
-                          <div className="space-y-2 sm:space-y-3">
-                            <label className="font-ui text-[9px] sm:text-[10px] font-bold text-muted uppercase tracking-[0.3em] ml-1">Culture Schedule URL</label>
-                            <div className="flex gap-2">
-                              <input
-                                type="text"
-                                value={localSettings['culture_schedule_url'] || ''}
-                                className="flex-1 bg-white/5 border border-white/5 rounded-xl sm:rounded-2xl px-5 sm:px-8 py-4 sm:py-5 text-[12px] sm:text-[13px] font-bold text-white outline-none focus:border-maple/50 transition-all shadow-inner"
-                                placeholder="URL or PDF..."
-                                onChange={(e) => handleSettingChange('culture_schedule_url', e.target.value)}
-                              />
-                              <button 
-                                onClick={() => document.getElementById('culture-pdf-upload')?.click()}
-                                className="bg-white/5 hover:bg-white/10 text-white p-4 rounded-2xl border border-white/5 transition-all active:scale-90"
-                                title="Upload PDF"
-                              >
-                                <Upload size={20} />
-                              </button>
-                              <input 
-                                type="file"
-                                id="culture-pdf-upload"
-                                className="hidden"
-                                accept="application/pdf"
-                                onChange={async (e) => {
-                                  const file = e.target.files?.[0];
-                                  if (!file || !supabase) return;
-                                  setLoading(true);
-                                  try {
-                                    const fileName = `culture_schedule_${Date.now()}.pdf`;
-                                    const { error: uploadError } = await supabase.storage.from('ucsf-media').upload(fileName, file);
-                                    if (uploadError) throw uploadError;
-                                    const { data: { publicUrl } } = supabase.storage.from('ucsf-media').getPublicUrl(fileName);
-                                    handleSettingChange('culture_schedule_url', publicUrl);
-                                  } catch (err: any) {
-                                    handleSupabaseError(err, 'PDF upload failed');
-                                  } finally {
-                                    setLoading(false);
-                                  }
-                                }}
-                              />
-                            </div>
-                          </div>
-                          <div className="space-y-2 sm:space-y-3">
-                            <label className="font-ui text-[9px] sm:text-[10px] font-bold text-muted uppercase tracking-[0.3em] ml-1">Selected Students URL</label>
-                            <div className="flex gap-2">
-                              <input
-                                type="text"
-                                value={localSettings['selected_students_url'] || ''}
-                                className="flex-1 bg-white/5 border border-white/5 rounded-xl sm:rounded-2xl px-5 sm:px-8 py-4 sm:py-5 text-[12px] sm:text-[13px] font-bold text-white outline-none focus:border-maple/50 transition-all shadow-inner"
-                                placeholder="URL or PDF..."
-                                onChange={(e) => handleSettingChange('selected_students_url', e.target.value)}
-                              />
-                              <button 
-                                onClick={() => document.getElementById('selected-pdf-upload')?.click()}
-                                className="bg-white/5 hover:bg-white/10 text-white p-4 rounded-2xl border border-white/5 transition-all active:scale-90"
-                                title="Upload PDF"
-                              >
-                                <Upload size={20} />
-                              </button>
-                              <input 
-                                type="file"
-                                id="selected-pdf-upload"
-                                className="hidden"
-                                accept="application/pdf"
-                                onChange={async (e) => {
-                                  const file = e.target.files?.[0];
-                                  if (!file || !supabase) return;
-                                  setLoading(true);
-                                  try {
-                                    const fileName = `selected_students_${Date.now()}.pdf`;
-                                    const { error: uploadError } = await supabase.storage.from('ucsf-media').upload(fileName, file);
-                                    if (uploadError) throw uploadError;
-                                    const { data: { publicUrl } } = supabase.storage.from('ucsf-media').getPublicUrl(fileName);
-                                    handleSettingChange('selected_students_url', publicUrl);
-                                  } catch (err: any) {
-                                    handleSupabaseError(err, 'PDF upload failed');
-                                  } finally {
-                                    setLoading(false);
-                                  }
-                                }}
-                              />
-                            </div>
-                          </div>
                         </div>
                       </div>
                     </div>

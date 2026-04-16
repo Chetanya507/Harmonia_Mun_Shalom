@@ -23,13 +23,10 @@ export default function Layout({ children, activeTab, setActiveTab, title, subti
     { id: 'events', label: 'Events', href: '#events' },
     { id: 'schedule', label: 'Schedule', href: '#schedule' },
     { id: 'leaderboards', label: 'Leaderboards', href: '#leaderboards' },
+    { id: 'spreadsheet', label: 'Spreadsheet', href: '#spreadsheet' },
     { id: 'notices', label: 'Notices', href: '#notices' },
     { id: 'gallery', label: 'Gallery', href: '#gallery' },
   ];
-
-  if (profile?.is_super_admin || profile?.email === 'kotadia.ean@gmail.com') {
-    navItems.push({ id: 'admin', label: 'Admin', href: '#admin' });
-  }
 
   return (
     <div className="min-h-screen flex flex-col bg-bg text-text selection:bg-maple selection:text-bg">
@@ -57,21 +54,35 @@ export default function Layout({ children, activeTab, setActiveTab, title, subti
           <ul className="hidden md:flex items-center gap-8 list-none">
             {navItems.map((item, idx) => (
               <li key={idx}>
-                <button
-                  onClick={() => {
-                    setActiveTab(item.id);
-                    if (item.href.startsWith('#') && item.id === activeTab) {
-                      const el = document.getElementById(item.href.substring(1));
-                      el?.scrollIntoView({ behavior: 'smooth' });
-                    }
-                  }}
-                  className={cn(
-                    "font-ui text-[13px] font-bold uppercase tracking-[1.5px] transition-colors",
-                    activeTab === item.id ? "text-maple" : "text-muted hover:text-text"
-                  )}
-                >
-                  {item.label}
-                </button>
+                {item.id === 'admin' ? (
+                  <a
+                    href="/admin"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(
+                      "font-ui text-[13px] font-bold uppercase tracking-[1.5px] transition-colors",
+                      activeTab === item.id ? "text-maple" : "text-muted hover:text-text"
+                    )}
+                  >
+                    {item.label}
+                  </a>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      if (item.href.startsWith('#') && item.id === activeTab) {
+                        const el = document.getElementById(item.href.substring(1));
+                        el?.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }}
+                    className={cn(
+                      "font-ui text-[13px] font-bold uppercase tracking-[1.5px] transition-colors",
+                      activeTab === item.id ? "text-maple" : "text-muted hover:text-text"
+                    )}
+                  >
+                    {item.label}
+                  </button>
+                )}
               </li>
             ))}
           </ul>
@@ -95,25 +106,40 @@ export default function Layout({ children, activeTab, setActiveTab, title, subti
                 className="md:hidden absolute top-full left-0 right-0 bg-bg border-b border-border p-6 flex flex-col gap-6 z-[101] shadow-2xl"
               >
                 {navItems.map((item, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => {
-                      setActiveTab(item.id);
-                      setIsMenuOpen(false);
-                      if (item.href.startsWith('#')) {
-                        setTimeout(() => {
-                          const el = document.getElementById(item.href.substring(1));
-                          el?.scrollIntoView({ behavior: 'smooth' });
-                        }, 100);
-                      }
-                    }}
-                    className={cn(
-                      "font-display text-4xl text-left tracking-wider uppercase",
-                      activeTab === item.id ? "text-maple" : "text-muted"
-                    )}
-                  >
-                    {item.label}
-                  </button>
+                  item.id === 'admin' ? (
+                    <a
+                      key={idx}
+                      href="/admin"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={cn(
+                        "font-display text-4xl text-left tracking-wider uppercase",
+                        activeTab === item.id ? "text-maple" : "text-muted"
+                      )}
+                    >
+                      {item.label}
+                    </a>
+                  ) : (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        setActiveTab(item.id);
+                        setIsMenuOpen(false);
+                        if (item.href.startsWith('#')) {
+                          setTimeout(() => {
+                            const el = document.getElementById(item.href.substring(1));
+                            el?.scrollIntoView({ behavior: 'smooth' });
+                          }, 100);
+                        }
+                      }}
+                      className={cn(
+                        "font-display text-4xl text-left tracking-wider uppercase",
+                        activeTab === item.id ? "text-maple" : "text-muted"
+                      )}
+                    >
+                      {item.label}
+                    </button>
+                  )
                 ))}
               </motion.div>
             )}
