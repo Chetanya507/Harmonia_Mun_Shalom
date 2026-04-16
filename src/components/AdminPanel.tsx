@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Papa from 'papaparse';
 import { supabase } from '../lib/supabase';
 import { 
@@ -37,10 +37,10 @@ import { Match, House, ScheduleItem, Category, Notice, StagedChange, Profile, Cu
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 
-const CategoryCard = ({ 
+function CategoryCard({ 
   cat, 
   deleteCategory, 
-  updateCategory,
+  updateCategory, 
   handleSupabaseError,
   culturalResults,
   houses,
@@ -57,7 +57,7 @@ const CategoryCard = ({
   addCulturalResult: (catId: string) => void,
   updateCulturalResult: (id: number, updates: Partial<CulturalResult>) => void,
   deleteCulturalResult: (id: number) => void
-}) => {
+}) {
   const [loading, setLoading] = useState(false);
   const [showDynasty, setShowDynasty] = useState(false);
   
@@ -446,7 +446,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
   }, [categories, allVenues, schedule, matches]);
 
   // Load pending changes from localStorage on mount
-  React.useEffect(() => {
+  useEffect(() => {
     const saved = localStorage.getItem('ucsf_pending_changes');
     if (saved) {
       try {
@@ -458,7 +458,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
   }, []);
 
   // Auto-save pending changes to localStorage
-  React.useEffect(() => {
+  useEffect(() => {
     localStorage.setItem('ucsf_pending_changes', JSON.stringify(pendingChanges));
   }, [pendingChanges]);
 
@@ -648,7 +648,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
   };
 
   // Sync local settings when settings prop changes
-  React.useEffect(() => {
+  useEffect(() => {
     setLocalSettings(settings);
     setHasChanges(false);
   }, [settings]);
@@ -1103,7 +1103,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
     });
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (!supabase) return;
 
     // Check for existing session

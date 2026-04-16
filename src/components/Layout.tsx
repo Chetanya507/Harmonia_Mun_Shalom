@@ -26,6 +26,7 @@ export default function Layout({ children, activeTab, setActiveTab, title, subti
     { id: 'spreadsheet', label: 'Spreadsheet', href: '#spreadsheet' },
     { id: 'notices', label: 'Notices', href: '#notices' },
     { id: 'gallery', label: 'Gallery', href: '#gallery' },
+    { id: 'admin', label: 'Admin', href: '#admin' },
   ];
 
   return (
