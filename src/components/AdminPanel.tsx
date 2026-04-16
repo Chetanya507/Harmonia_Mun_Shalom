@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import Papa from 'papaparse';
 import { supabase } from '../lib/supabase';
 import { 
@@ -37,10 +37,10 @@ import { Match, House, ScheduleItem, Category, Notice, StagedChange, Profile, Cu
 import { cn } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 
-function CategoryCard({ 
+const CategoryCard = ({ 
   cat, 
   deleteCategory, 
-  updateCategory, 
+  updateCategory,
   handleSupabaseError,
   culturalResults,
   houses,
@@ -57,7 +57,7 @@ function CategoryCard({
   addCulturalResult: (catId: string) => void,
   updateCulturalResult: (id: number, updates: Partial<CulturalResult>) => void,
   deleteCulturalResult: (id: number) => void
-}) {
+}) => {
   const [loading, setLoading] = useState(false);
   const [showDynasty, setShowDynasty] = useState(false);
   
@@ -446,7 +446,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
   }, [categories, allVenues, schedule, matches]);
 
   // Load pending changes from localStorage on mount
-  useEffect(() => {
+  React.useEffect(() => {
     const saved = localStorage.getItem('ucsf_pending_changes');
     if (saved) {
       try {
@@ -458,7 +458,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
   }, []);
 
   // Auto-save pending changes to localStorage
-  useEffect(() => {
+  React.useEffect(() => {
     localStorage.setItem('ucsf_pending_changes', JSON.stringify(pendingChanges));
   }, [pendingChanges]);
 
@@ -648,7 +648,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
   };
 
   // Sync local settings when settings prop changes
-  useEffect(() => {
+  React.useEffect(() => {
     setLocalSettings(settings);
     setHasChanges(false);
   }, [settings]);
@@ -1103,7 +1103,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
     });
   };
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (!supabase) return;
 
     // Check for existing session
@@ -1513,7 +1513,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                   {selectedResultCategory ? (
                     <div className="space-y-12">
                       {/* Sports Matches Section (if applicable) */}
-                      {(displayCategories.find(c => c.id === selectedResultCategory)?.category_type === 'sport' || !displayCategories.find(c => c.id === selectedResultCategory)?.category_type) && (
+                      {displayCategories.find(c => c.id === selectedResultCategory)?.category_type === 'sport' && (
                         <div className="space-y-8">
                           <div className="flex items-center justify-between px-4">
                             <div className="flex items-center gap-4">
@@ -1588,88 +1588,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                         </div>
                       )}
 
-                      {/* Manual Point Entry Section (Dynasty Rankings) */}
-                      <div className="pt-12 border-t border-white/5 space-y-8">
-                        <div className="flex items-center justify-between px-4">
-                          <div className="flex items-center gap-4">
-                            <Trophy size={20} className="text-maple" />
-                            <h3 className="text-xl sm:text-2xl font-display uppercase tracking-tighter text-white">Dynasty Rankings</h3>
-                          </div>
-                          <button 
-                            onClick={() => addCulturalResult(selectedResultCategory)}
-                            className="bg-maple/10 hover:bg-maple/20 text-maple py-2 px-4 rounded-lg font-ui text-[9px] font-bold uppercase tracking-[0.2em] transition-all border border-maple/20 flex items-center gap-2 active:scale-95"
-                          >
-                            <Plus size={14} /> Add Ranking
-                          </button>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                          {displayCulturalResults
-                            .filter(r => r.category_id === selectedResultCategory)
-                            .sort((a, b) => (a.rank || 0) - (b.rank || 0))
-                            .map((result) => (
-                              <div key={result.id} className="bg-bg2 border border-white/5 rounded-2xl p-6 space-y-4 relative group">
-                                <button 
-                                  onClick={() => deleteCulturalResult(result.id)}
-                                  className="absolute top-4 right-4 text-danger/50 hover:text-danger p-2 opacity-0 group-hover:opacity-100 transition-all"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                                
-                                <div className="flex items-center gap-4">
-                                  <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center font-display text-lg text-maple shrink-0 border border-white/5">
-                                    <input
-                                      type="number"
-                                      value={result.rank || ''}
-                                      placeholder="-"
-                                      className="w-full bg-transparent border-none text-center outline-none"
-                                      onChange={(e) => updateCulturalResult(result.id, { rank: parseInt(e.target.value) || 0 })}
-                                    />
-                                  </div>
-                                  <div className="flex-1">
-                                    <label className="font-ui text-[8px] font-bold text-muted uppercase tracking-widest mb-1 block">House</label>
-                                    <select
-                                      value={result.house_id}
-                                      onChange={(e) => updateCulturalResult(result.id, { house_id: e.target.value })}
-                                      className="w-full bg-white/5 border border-white/5 rounded-lg py-1 px-2 text-[10px] font-bold uppercase tracking-widest text-white outline-none"
-                                    >
-                                      {houses.map(h => <option key={h.id} value={h.id} className="bg-bg-dark">{h.name}</option>)}
-                                    </select>
-                                  </div>
-                                </div>
-
-                                <div className="pt-2">
-                                  <label className="font-ui text-[8px] font-bold text-muted uppercase tracking-widest mb-2 block text-center">Points Distributed</label>
-                                  <div className="flex items-center justify-center gap-4">
-                                    <button 
-                                      onClick={() => updateCulturalResult(result.id, { points: Math.max(0, (result.points || 0) - 5) })}
-                                      className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-muted hover:bg-white/10"
-                                    >
-                                      -
-                                    </button>
-                                    <input
-                                      type="number"
-                                      value={result.points || 0}
-                                      className="w-16 bg-white/5 border border-white/5 rounded-xl py-2 text-xl font-display text-maple text-center outline-none focus:border-maple/50"
-                                      onChange={(e) => updateCulturalResult(result.id, { points: parseInt(e.target.value) || 0 })}
-                                    />
-                                    <button 
-                                      onClick={() => updateCulturalResult(result.id, { points: (result.points || 0) + 5 })}
-                                      className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-muted hover:bg-white/10"
-                                    >
-                                      +
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          {displayCulturalResults.filter(r => r.category_id === selectedResultCategory).length === 0 && (
-                            <div className="col-span-full py-12 text-center bg-white/5 rounded-3xl border border-dashed border-white/10">
-                              <p className="text-muted font-ui text-[10px] font-bold uppercase tracking-widest">No rankings entered yet for this category</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                      {/* Manual Point Entry Section (Dynasty Rankings) moved to Categories tab */}
                     </div>
                   ) : (
                     <div className="py-40 text-center card-glass">
@@ -2354,15 +2273,8 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                           <p className="font-ui text-[10px] font-bold text-muted uppercase tracking-[0.4em] mt-2">{house.motto || 'Striving for Excellence'}</p>
                         </div>
                         <div className="text-center sm:text-right w-full sm:w-auto border-t sm:border-t-0 border-white/5 pt-4 sm:pt-0">
-                          <div className="flex flex-col items-center sm:items-end gap-1">
-                            <input 
-                              type="number"
-                              value={house.points || 0}
-                              onChange={(e) => stageChange('houses', house.id, { points: parseInt(e.target.value) || 0 })}
-                              className="w-24 sm:w-32 bg-white/5 border border-white/5 rounded-xl py-2 px-3 text-2xl sm:text-4xl font-display text-maple text-center sm:text-right outline-none focus:border-maple/50 focus:bg-white/10 transition-all"
-                            />
-                            <div className="font-ui text-[8px] sm:text-[10px] font-bold text-muted uppercase tracking-[0.3em] mt-1 mr-2">Total Points</div>
-                          </div>
+                          <div className="text-3xl sm:text-5xl font-display text-maple tracking-tighter">{house.points || 0}</div>
+                          <div className="font-ui text-[8px] sm:text-[10px] font-bold text-muted uppercase tracking-[0.3em] mt-1">Total Points</div>
                         </div>
                       </div>
                     ))}

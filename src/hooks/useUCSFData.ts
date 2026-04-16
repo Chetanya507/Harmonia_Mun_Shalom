@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { House, Match, ScheduleItem, Setting, Category, GalleryItem, Notice, CulturalResult, StagedChange, Profile } from '../types';
 import { HARDCODED_CATEGORIES } from '../constants/hardcodedData';
@@ -226,11 +226,6 @@ export function useUCSFData() {
     
     fetchData(true);
 
-    const handleFocus = () => {
-      fetchData(false);
-    };
-    window.addEventListener('focus', handleFocus);
-
     // Real-time subscriptions - more targeted
     const housesSub = supabase.channel('houses-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'houses' }, fetchHouses)
@@ -273,7 +268,6 @@ export function useUCSFData() {
       .subscribe();
 
     return () => {
-      window.removeEventListener('focus', handleFocus);
       if (supabase) {
         supabase.removeChannel(housesSub);
         supabase.removeChannel(matchesSub);
@@ -289,7 +283,7 @@ export function useUCSFData() {
     };
   }, []);
 
-  const refresh = useCallback(() => fetchData(false), []);
+  const refresh = React.useCallback(() => fetchData(false), []);
 
   return { houses, matches, schedule, settings, categories, gallery, notices, culturalResults, stagedChanges, profile, loading, isRefreshing, error, refresh };
 }

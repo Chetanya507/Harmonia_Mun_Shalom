@@ -26,7 +26,6 @@ export default function Layout({ children, activeTab, setActiveTab, title, subti
     { id: 'spreadsheet', label: 'Spreadsheet', href: '#spreadsheet' },
     { id: 'notices', label: 'Notices', href: '#notices' },
     { id: 'gallery', label: 'Gallery', href: '#gallery' },
-    { id: 'admin', label: 'Admin', href: '#admin' },
   ];
 
   return (
@@ -55,21 +54,35 @@ export default function Layout({ children, activeTab, setActiveTab, title, subti
           <ul className="hidden md:flex items-center gap-8 list-none">
             {navItems.map((item, idx) => (
               <li key={idx}>
-                <button
-                  onClick={() => {
-                    setActiveTab(item.id);
-                    if (item.href?.startsWith('#')) {
-                      const el = document.getElementById(item.href.substring(1));
-                      el?.scrollIntoView({ behavior: 'smooth' });
-                    }
-                  }}
-                  className={cn(
-                    "font-ui text-[13px] font-bold uppercase tracking-[1.5px] transition-colors",
-                    activeTab === item.id ? "text-maple" : "text-muted hover:text-text"
-                  )}
-                >
-                  {item.label}
-                </button>
+                {item.id === 'admin' ? (
+                  <a
+                    href="/admin"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={cn(
+                      "font-ui text-[13px] font-bold uppercase tracking-[1.5px] transition-colors",
+                      activeTab === item.id ? "text-maple" : "text-muted hover:text-text"
+                    )}
+                  >
+                    {item.label}
+                  </a>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      if (item.href.startsWith('#') && item.id === activeTab) {
+                        const el = document.getElementById(item.href.substring(1));
+                        el?.scrollIntoView({ behavior: 'smooth' });
+                      }
+                    }}
+                    className={cn(
+                      "font-ui text-[13px] font-bold uppercase tracking-[1.5px] transition-colors",
+                      activeTab === item.id ? "text-maple" : "text-muted hover:text-text"
+                    )}
+                  >
+                    {item.label}
+                  </button>
+                )}
               </li>
             ))}
           </ul>
@@ -93,25 +106,40 @@ export default function Layout({ children, activeTab, setActiveTab, title, subti
                 className="md:hidden absolute top-full left-0 right-0 bg-bg border-b border-border p-6 flex flex-col gap-6 z-[101] shadow-2xl"
               >
                 {navItems.map((item, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => {
-                      setActiveTab(item.id);
-                      setIsMenuOpen(false);
-                      if (item.href?.startsWith('#')) {
-                        setTimeout(() => {
-                          const el = document.getElementById(item.href.substring(1));
-                          el?.scrollIntoView({ behavior: 'smooth' });
-                        }, 100);
-                      }
-                    }}
-                    className={cn(
-                      "font-display text-4xl text-left tracking-wider uppercase",
-                      activeTab === item.id ? "text-maple" : "text-muted"
-                    )}
-                  >
-                    {item.label}
-                  </button>
+                  item.id === 'admin' ? (
+                    <a
+                      key={idx}
+                      href="/admin"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={cn(
+                        "font-display text-4xl text-left tracking-wider uppercase",
+                        activeTab === item.id ? "text-maple" : "text-muted"
+                      )}
+                    >
+                      {item.label}
+                    </a>
+                  ) : (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        setActiveTab(item.id);
+                        setIsMenuOpen(false);
+                        if (item.href.startsWith('#')) {
+                          setTimeout(() => {
+                            const el = document.getElementById(item.href.substring(1));
+                            el?.scrollIntoView({ behavior: 'smooth' });
+                          }, 100);
+                        }
+                      }}
+                      className={cn(
+                        "font-display text-4xl text-left tracking-wider uppercase",
+                        activeTab === item.id ? "text-maple" : "text-muted"
+                      )}
+                    >
+                      {item.label}
+                    </button>
+                  )
                 ))}
               </motion.div>
             )}
@@ -150,7 +178,7 @@ export default function Layout({ children, activeTab, setActiveTab, title, subti
           <div className="w-full h-px bg-border my-4" />
 
           <div className="flex flex-col md:flex-row justify-between w-full gap-4 font-sans text-[12px] text-subtle">
-            <span>© 2026 Shalom Hills International School | Made by Ean Kotadia and Hardik Batra</span>
+            <span>© 2026 Shalom Hills International School | Made by Ean Kotadia, Hardik Batra and Tanush Kansal</span>
           </div>
         </div>
       </footer>

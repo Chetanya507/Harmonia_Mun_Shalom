@@ -1,9 +1,8 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState } from 'react';
 import Layout from './components/Layout';
 import MatchCard from './components/MatchCard';
 import ScheduleCard from './components/ScheduleCard';
 import EventsSection from './components/EventsSection';
-import AdminPanel from './components/AdminPanel';
 import { useUCSFData } from './hooks/useUCSFData';
 import { Match } from './types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -22,16 +21,10 @@ export default function App() {
   const [selectedLeaderboardEventId, setSelectedLeaderboardEventId] = useState<string | 'all'>('all');
   const { houses, matches, schedule, settings, categories, gallery, notices, culturalResults, stagedChanges, profile, loading, error, refresh } = useUCSFData();
   
-  useEffect(() => {
-    if (window.location.pathname === '/admin' || window.location.hash === '#admin') {
-      setActiveTab('admin');
-    }
-  }, []);
+  const liveItems = React.useMemo(() => schedule.filter(s => s.status === 'live'), [schedule]);
+  const upcomingItems = React.useMemo(() => schedule.filter(s => s.status === 'upcoming').slice(0, 3), [schedule]);
 
-  const liveItems = useMemo(() => schedule.filter(s => s.status === 'live'), [schedule]);
-  const upcomingItems = useMemo(() => schedule.filter(s => s.status === 'upcoming').slice(0, 3), [schedule]);
-
-  const gradePoints = useMemo(() => {
+  const gradePoints = React.useMemo(() => {
     const points: Record<string, Record<string, number>> = {};
     houses.forEach(h => {
       // 'all' category should just use the pre-computed points from the database
@@ -62,7 +55,7 @@ export default function App() {
     return points;
   }, [houses, matches]);
 
-  const eventPoints = useMemo(() => {
+  const eventPoints = React.useMemo(() => {
     if (selectedLeaderboardEventId === 'all') return null;
     
     const points: Record<string, number> = {};
@@ -81,7 +74,7 @@ export default function App() {
     return points;
   }, [houses, matches, culturalResults, selectedLeaderboardEventId]);
 
-  const sortedHousesForLeaderboard = useMemo(() => {
+  const sortedHousesForLeaderboard = React.useMemo(() => {
     return [...houses].sort((a, b) => {
       if (selectedLeaderboardEventId !== 'all' && eventPoints) {
         return (eventPoints[b.id] || 0) - (eventPoints[a.id] || 0);
@@ -789,25 +782,6 @@ export default function App() {
         return null;
     }
   };
-
-  if (activeTab === 'admin') {
-    return (
-      <AdminPanel 
-        matches={matches} 
-        houses={houses} 
-        schedule={schedule}
-        categories={categories}
-        notices={notices}
-        gallery={gallery}
-        culturalResults={culturalResults}
-        stagedChanges={stagedChanges}
-        profile={profile}
-        settings={settings}
-        refresh={refresh}
-        onBack={() => setActiveTab('home')}
-      />
-    );
-  }
 
   return (
     <Layout 
