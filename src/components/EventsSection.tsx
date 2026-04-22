@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Category, Match } from '../types';
-import { Trophy, Music, Palette, Film, Theater, Swords, Target, Users, Clock, Calendar, Info, ChevronRight, X, ArrowRight } from 'lucide-react';
+import { Trophy, Music, Palette, Film, Theater, Swords, Target, Users, Clock, Calendar, Info, ChevronRight, X, ArrowRight, FileText } from 'lucide-react';
 import MatchCard from './MatchCard';
 import { cn } from '../lib/utils';
 
@@ -14,7 +14,7 @@ interface EventsSectionProps {
 export default function EventsSection({ categories, matches, setActiveTab }: EventsSectionProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   
-  const sports = categories.filter(c => c.category_type === 'sport');
+  const sports = categories.filter(c => c.category_type === 'sport'); // These represent committees
   const cultural = categories.filter(c => c.category_type === 'cultural');
   const other = categories.filter(c => !c.category_type);
 
@@ -74,7 +74,7 @@ export default function EventsSection({ categories, matches, setActiveTab }: Eve
         </div>
 
         <div className="mt-auto flex items-center justify-between text-maple font-ui text-[10px] font-bold uppercase tracking-widest group-hover:gap-2 transition-all">
-          View Rules & Matches
+          View Agendas & Guide
           <ArrowRight size={14} />
         </div>
       </motion.div>
@@ -82,7 +82,7 @@ export default function EventsSection({ categories, matches, setActiveTab }: Eve
   };
 
   return (
-    <div id="events" className="max-w-7xl mx-auto px-6 py-24 space-y-32">
+    <div id="committees" className="max-w-7xl mx-auto px-6 py-24 space-y-32">
       <AnimatePresence>
         {expandedId && expandedCategory && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-8">
@@ -138,12 +138,16 @@ export default function EventsSection({ categories, matches, setActiveTab }: Eve
                       <div>
                         <h4 className="text-2xl font-display uppercase tracking-widest mb-6 flex items-center gap-3">
                           <Info className="text-maple" />
-                          Rules & Regulations
+                          Agenda & Background Guide
                         </h4>
                         <div className="bg-white/5 border border-border rounded-3xl p-8 md:p-10">
-                          <p className="text-lg text-text/80 leading-relaxed whitespace-pre-line">
-                            {expandedCategory.special_rules}
+                          <p className="text-lg text-text/80 leading-relaxed whitespace-pre-line mb-4">
+                            {expandedCategory.special_rules || "Agenda details and background guide will be available soon."}
                           </p>
+                          <a href="#" className="inline-flex items-center gap-2 text-maple font-ui text-[10px] font-bold uppercase tracking-widest hover:text-white transition-colors">
+                            <FileText size={16} />
+                            Download Background Guide
+                          </a>
                         </div>
                       </div>
 
@@ -193,7 +197,7 @@ export default function EventsSection({ categories, matches, setActiveTab }: Eve
         <div className="mb-16">
           <p className="sec-label">Rules & Instructions</p>
           <h2 className="text-6xl md:text-8xl">General Guidelines</h2>
-          <p className="text-muted mt-4 text-lg">Essential information for all UCSF 2026 participants.</p>
+          <p className="text-muted mt-4 text-lg">Essential information for all Harmonia MUN 2026 participants.</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div className="bg-white/5 border border-border p-10 rounded-3xl">
@@ -222,9 +226,9 @@ export default function EventsSection({ categories, matches, setActiveTab }: Eve
       {sports.length > 0 && (
         <section>
           <div className="mb-16">
-            <p className="sec-label">UCSF 2026</p>
-            <h2 className="text-6xl md:text-8xl">Sports Events</h2>
-            <p className="text-muted mt-4 text-lg">Competitive house matches across various disciplines.</p>
+            <p className="sec-label">Harmonia MUN 2026</p>
+            <h2 className="text-6xl md:text-8xl">Committees</h2>
+            <p className="text-muted mt-4 text-lg">Detailed agendas and background guides for all committees.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {sports.map(renderEventCard)}

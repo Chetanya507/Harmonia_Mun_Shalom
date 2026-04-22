@@ -20,7 +20,7 @@ export default function Layout({ children, activeTab, setActiveTab, title, subti
 
   const navItems = [
     { id: 'home', label: 'Home', href: '#home' },
-    { id: 'events', label: 'Events', href: '#events' },
+    { id: 'committees', label: 'Committees', href: '#committees' },
     { id: 'schedule', label: 'Schedule', href: '#schedule' },
     { id: 'leaderboards', label: 'Leaderboards', href: '#leaderboards' },
     { id: 'spreadsheet', label: 'Spreadsheet', href: '#spreadsheet' },
@@ -178,7 +178,7 @@ export default function Layout({ children, activeTab, setActiveTab, title, subti
           <div className="w-full h-px bg-border my-4" />
 
           <div className="flex flex-col md:flex-row justify-between w-full gap-4 font-sans text-[12px] text-subtle">
-            <span>© 2026 Shalom Hills International School | Made by Ean Kotadia, Hardik Batra and Tanush Kansal</span>
+            <span>© 2026 Shalom Group of Schools | Made by Ean Kotadia, Hardik Batra and Tanush Kansal</span>
           </div>
         </div>
       </footer>

@@ -32,7 +32,7 @@ export default function App() {
       points[h.id] = { '7-8th': 0, '9-10th': 0, '11th': 0, '12th': 0, 'all': h.points || 0 };
     });
 
-    // Sports Points (Grade-specific)
+    // Committees Points (Grade-specific)
     matches.filter(m => m.status === 'completed' && m.winner_id).forEach(m => {
       const winnerId = m.winner_id!;
       const grade = m.eligible_years;
@@ -134,9 +134,9 @@ export default function App() {
     );
   }
 
-  const festivalName = settings['festival_name'] || 'UCSF 2026';
-  const festivalSubtitle = settings['festival_subtitle'] || 'Union of Culture & Sports Fest';
-  const festivalDates = settings['festival_dates'] || 'April 2026 - Shalom Hills';
+  const festivalName = settings['festival_name'] || 'Harmonia MUN 2026';
+  const festivalSubtitle = settings['festival_subtitle'] || 'Harmonia MUN';
+  const festivalDates = settings['festival_dates'] || 'April 2026 - Shalom Group of Schools';
   const announcementText = settings['announcement_text'];
   const footerText = settings['footer_text'];
   const schoolLogoUrl = settings['school_logo_url'];
@@ -156,7 +156,7 @@ export default function App() {
 
   const renderContent = () => {
     switch (activeTab) {
-      case 'events':
+      case 'committees':
         return <EventsSection categories={categories} matches={matches} setActiveTab={setActiveTab} />;
       case 'home':
         return (
@@ -212,10 +212,10 @@ export default function App() {
                   className="flex flex-wrap justify-center gap-4"
                 >
                   <button 
-                    onClick={() => setActiveTab('events')}
+                    onClick={() => setActiveTab('committees')}
                     className="btn-primary group flex items-center gap-2"
                   >
-                    Explore Events
+                    Explore Committees
                     <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
                   </button>
                   <button onClick={() => handleTabChange('schedule')} className="btn-ghost">Full Schedule</button>
@@ -253,9 +253,9 @@ export default function App() {
                 <div className="grid md:grid-cols-2 gap-24 items-start">
                   <div>
                     <p className="sec-label">The Festival</p>
-                    <h2 className="text-5xl md:text-6xl mb-8">What Is UCSF?</h2>
+                    <h2 className="text-5xl md:text-6xl mb-8">What Is Harmonia MUN?</h2>
                     <p className="text-white/60 mb-6 leading-relaxed">
-                      The <strong className="text-white">Union of Culture & Sports Fest</strong> is the premier inter-school championship hosted by Shalom Hills International School.
+                      The <strong className="text-white">Harmonia MUN</strong> is the premier inter-school championship hosted by Shalom Group of Schools.
                     </p>
                     <p className="text-white/60 mb-12 leading-relaxed">
                       Four legendary houses — Maple, Cedar, Ebony, and Oak — battle across disciplines, each vying for the ultimate crown and the glory of their house.
@@ -314,7 +314,7 @@ export default function App() {
               <div className="max-w-7xl mx-auto px-6">
                 <div className="mb-16">
                   <p className="sec-label">Athletics</p>
-                  <h2 className="text-5xl md:text-6xl mb-6">Sports Section</h2>
+                  <h2 className="text-5xl md:text-6xl mb-6">Committees Section</h2>
                   <p className="text-muted max-w-xl">The arena where strength meets strategy. Dynamic categories from the field.</p>
                 </div>
                 
@@ -341,7 +341,7 @@ export default function App() {
                           <h4 className="text-2xl font-display uppercase tracking-wider mb-4 text-white drop-shadow-lg">{sport.name}</h4>
                           <button 
                             onClick={() => {
-                              setActiveTab('events');
+                              setActiveTab('committees');
                             }}
                             className="w-full py-3 bg-white/10 hover:bg-maple hover:text-bg-dark border border-white/10 hover:border-maple transition-all font-ui text-[10px] font-bold uppercase tracking-widest backdrop-blur-sm"
                           >
@@ -391,7 +391,7 @@ export default function App() {
                         <div className="mt-auto">
                           <button 
                             onClick={() => {
-                              setActiveTab('events');
+                              setActiveTab('committees');
                             }}
                             className="w-full py-2 bg-white/5 hover:bg-white/10 border border-white/10 transition-all font-ui text-[9px] font-bold uppercase tracking-widest text-muted hover:text-text"
                           >
@@ -416,7 +416,7 @@ export default function App() {
             <div className="mb-20">
               <p className="sec-label">Event Schedule</p>
               <h2 className="text-6xl md:text-8xl">The Timeline</h2>
-              <p className="text-muted mt-4 text-lg">Full Three-Day Programme — UCSF 2026</p>
+              <p className="text-muted mt-4 text-lg">Full Three-Day Programme — Harmonia MUN 2026</p>
             </div>
             
             <div className="space-y-32">
@@ -435,7 +435,7 @@ export default function App() {
                         item={item} 
                         index={idx} 
                         category={categories.find(c => c.name === item.category)}
-                        onCategoryClick={() => setActiveTab('events')}
+                        onCategoryClick={() => setActiveTab('committees')}
                       />
                     ))}
                   </div>
@@ -551,7 +551,7 @@ export default function App() {
               <div>
                 <p className="sec-label">Moments</p>
                 <h2 className="text-4xl sm:text-6xl md:text-7xl">Gallery</h2>
-                <p className="text-white/40 mt-4">Relive the highlights of UCSF 2025 & 2026.</p>
+                <p className="text-white/40 mt-4">Relive the highlights of Harmonia MUN 2025 & 2026.</p>
               </div>
               
               <div className="flex items-center flex-nowrap gap-2 bg-white/5 p-1 border border-border rounded-lg self-start overflow-x-auto no-scrollbar pb-2 w-full max-w-full">
@@ -638,7 +638,7 @@ export default function App() {
               <div>
                 <p className="sec-label">Rankings</p>
                 <h2 className="text-4xl sm:text-6xl md:text-7xl">Leaderboards</h2>
-                <p className="text-white/40 mt-4">Current standings of all dynasties across UCSF 2026.</p>
+                <p className="text-white/40 mt-4">Current standings of all dynasties across Harmonia MUN 2026.</p>
               </div>
               
               <div className="flex flex-col gap-4 w-full md:w-auto max-w-full overflow-hidden">
