@@ -1147,7 +1147,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
           <div className="card-glass overflow-hidden shadow-2xl">
             <div className="p-10">
               <h2 className="text-4xl text-center text-text mb-2 tracking-wider uppercase">Admin Access</h2>
-              <p className="sec-label justify-center mb-10">Secure Control Interface • UCSF 2026</p>
+              <p className="sec-label justify-center mb-10">Secure Control Interface • Harmonia MUN 2026</p>
               
               <form onSubmit={handleLogin} className="space-y-6">
                 <div className="form-group">
@@ -1157,7 +1157,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="form-input"
-                    placeholder="admin@ucsf.local"
+                    placeholder="admin@harmoniamun.local"
                     required
                   />
                 </div>
@@ -1919,7 +1919,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                   <div className="flex flex-col lg:flex-row items-center justify-between bg-[#0d1b33] p-10 rounded-[3rem] border border-white/5 shadow-2xl gap-8">
                     <div>
                       <h2 className="text-4xl font-display uppercase tracking-tighter text-white">Event Schedule</h2>
-                      <p className="text-muted text-sm mt-2 font-ui uppercase tracking-[0.2em] opacity-60">Timeline of sports and cultural events</p>
+                      <p className="text-muted text-sm mt-2 font-ui uppercase tracking-[0.2em] opacity-60">Timeline of committees</p>
                     </div>
 
                     <div className="flex flex-col sm:flex-row items-center gap-4 w-full lg:w-auto">
@@ -2088,7 +2088,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                   <div className="flex flex-col sm:flex-row items-center justify-between bg-bg2 p-6 sm:p-10 rounded-[2rem] sm:rounded-[3rem] border border-white/5 shadow-2xl gap-6">
                     <div className="text-center sm:text-left">
                       <h2 className="text-3xl sm:text-4xl font-display uppercase tracking-tighter text-white">Event Categories</h2>
-                      <p className="text-muted text-[10px] font-bold uppercase tracking-[0.3em] mt-3 opacity-60">Define sports and cultural event specifications</p>
+                      <p className="text-muted text-[10px] font-bold uppercase tracking-[0.3em] mt-3 opacity-60">Define committee specifications</p>
                     </div>
                     <button 
                       onClick={addCategory}
@@ -2103,7 +2103,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                   <div className="space-y-10">
                     <div className="flex items-center gap-6 px-6">
                       <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-                      <h3 className="font-display text-2xl uppercase tracking-[0.3em] text-maple">Sports Categories</h3>
+                      <h3 className="font-display text-2xl uppercase tracking-[0.3em] text-maple">Committees Categories</h3>
                       <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
@@ -2535,7 +2535,7 @@ export default function AdminPanel({ matches, houses, schedule, categories, noti
                             type="text"
                             value={localSettings['footer_text'] || ''}
                             className="w-full bg-white/5 border border-white/5 rounded-xl sm:rounded-2xl px-5 sm:px-8 py-4 sm:py-5 text-[12px] sm:text-[13px] font-bold text-white outline-none focus:border-maple/50 transition-all shadow-inner"
-                            placeholder="e.g. © 2026 UCSF. All rights reserved."
+                            placeholder="e.g. © 2026 Harmonia MUN. All rights reserved."
                             onChange={(e) => handleSettingChange('footer_text', e.target.value)}
                           />
                         </div>
